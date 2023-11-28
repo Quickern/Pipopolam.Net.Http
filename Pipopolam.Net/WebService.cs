@@ -16,35 +16,62 @@ namespace Pipopolam.Net
 {
     public abstract class WebService
     {
-        public const double TIMEOUT = 2;
+        public const double Timeout = 2;
 
-        private readonly HttpClient client;
-        private readonly HttpClientHandler clientHandler;
-        protected readonly CookieContainer Cookies;
-
-        public abstract string BaseHost { get; }
+        private readonly bool _critical;
 
         private int requestId = 0;
 
+        public abstract string BaseHost { get; }
         protected virtual bool PrehandleErrors => false;
-
         protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
 
-        public ISerializer Serializer { get; } = new DataContractSerializer();
+        private CookieContainer _cookies;
+        protected CookieContainer Cookies => _cookies ??= new CookieContainer();
+
+        private HttpClientHandler _clientHandler;
+        private HttpClientHandler ClientHandler
+        {
+            get
+            {
+                if (_clientHandler == null)
+                {
+                    _clientHandler = CreateHandler();
+
+                    _clientHandler.CookieContainer = Cookies;
+                    _clientHandler.UseCookies = true;
+                }
+
+                return _clientHandler;
+            }
+        }
+
+        private HttpClient _client;
+        private HttpClient Client
+        {
+            get
+            {
+                if (_client == null)
+                {
+                    _client = new HttpClient(ClientHandler);
+                    if (_critical)
+                        _client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
+
+                return _client;
+            }
+        }
+
+        private ISerializer _serializer;
+        public ISerializer Serializer => _serializer ??= CreateSerializer();
 
         protected WebService(bool critical = true)
         {
-            Cookies = new CookieContainer();
-            clientHandler = new HttpClientHandler
-            {
-                CookieContainer = Cookies,
-                UseCookies = true
-            };
-
-            client = new HttpClient(clientHandler);
-            if (critical)
-                client.Timeout = TimeSpan.FromSeconds(TIMEOUT);
+            _critical = critical;
         }
+
+        protected virtual HttpClientHandler CreateHandler() => new HttpClientHandler();
+        protected virtual ISerializer CreateSerializer() => new DataContractSerializer();
 
         /// <summary>
         /// Create base request to extend it.
@@ -159,7 +186,7 @@ namespace Pipopolam.Net
                 request.Content = requestInfo.Content;
             try
             {
-                HttpResponseMessage resp = await client.SendAsync(request, token);
+                HttpResponseMessage resp = await Client.SendAsync(request, token);
                 if (resp.IsSuccessStatusCode)
                 {
                     return resp;

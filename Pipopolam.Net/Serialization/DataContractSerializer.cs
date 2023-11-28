@@ -8,7 +8,14 @@ namespace Pipopolam.Net.Serialization
 {
     public class DataContractSerializer : ISerializer
     {
-        public DataContractJsonSerializerSettings Settings { get; set; }
+        public DataContractJsonSerializerSettings Settings { get; }
+
+        public DataContractSerializer() { }
+
+        public DataContractSerializer(DataContractJsonSerializerSettings settings)
+        {
+            Settings = settings;
+        }
 
         public HttpContent Serialize<T>(T obj) where T : class
         {

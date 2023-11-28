@@ -8,22 +8,22 @@ namespace Pipopolam.Net
 {
     public class Request
     {
-        private readonly CancellationTokenSource cancellationTokenSource;
-        private readonly Task task;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly Task _task;
 
-        protected virtual Task Task => task;
+        protected virtual Task Task => _task;
 
         public HttpResponseHeaders Headers { get; protected set; }
 
         protected Request(CancellationTokenSource cancellationTokenSource)
         {
-            this.cancellationTokenSource = cancellationTokenSource;
+            _cancellationTokenSource = cancellationTokenSource;
         }
 
-        public Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource):
+        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource):
             this(cancellationTokenSource)
         {
-            this.task = RequestWrapper(task);
+            _task = RequestWrapper(task);
         }
 
         public TaskAwaiter GetAwaiter() => Task.GetAwaiter();
@@ -35,7 +35,7 @@ namespace Pipopolam.Net
             Headers = response.Headers;
         }
 
-        public void Cancel() => cancellationTokenSource.Cancel();
+        public void Cancel() => _cancellationTokenSource.Cancel();
 
         public static implicit operator Task(Request request)
         {
@@ -45,19 +45,19 @@ namespace Pipopolam.Net
 
     public class Request<T> : Request where T: class
     {
-        private readonly Task<T> task;
+        private readonly Task<T> _task;
 
-        protected override Task Task => task;
+        protected override Task Task => _task;
 
-        public T Result => task.Result;
+        public T Result => _task.Result;
 
-        public Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource) :
+        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource) :
             base(cancellationTokenSource)
         {
-            this.task = RequestWrapper(task);
+            this._task = RequestWrapper(task);
         }
 
-        public new TaskAwaiter<T> GetAwaiter() => task.GetAwaiter();
+        public new TaskAwaiter<T> GetAwaiter() => _task.GetAwaiter();
 
         private async Task<T> RequestWrapper(Task<ServiceResponse<T>> task)
         {
@@ -70,7 +70,7 @@ namespace Pipopolam.Net
 
         public static implicit operator Task<T>(Request<T> request)
         {
-            return request.task;
+            return request._task;
         }
     }
 }

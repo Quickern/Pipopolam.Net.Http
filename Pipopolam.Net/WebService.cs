@@ -5,13 +5,12 @@
 using System;
 using System.Threading.Tasks;
 using System.Net;
-using System.Runtime.Serialization.Json;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Diagnostics;
 using System.Threading;
-using System.Runtime.Serialization;
+using Pipopolam.Net.Serialization;
 
 namespace Pipopolam.Net
 {
@@ -31,7 +30,7 @@ namespace Pipopolam.Net
 
         protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
 
-        public virtual DataContractJsonSerializerSettings SerializerSettings => null;
+        public ISerializer Serializer { get; } = new DataContractSerializer();
 
         protected WebService(bool critical = true)
         {
@@ -59,7 +58,7 @@ namespace Pipopolam.Net
         }
 
         /// <summary>
-        /// Ovveride this and add service path to url builder.
+        /// Override this and add service path to url builder.
         /// </summary>
         /// <param name="builder">Url builder</param>
         protected abstract void GenericServicePath(RequestBuilder builder);
@@ -115,8 +114,7 @@ namespace Pipopolam.Net
                 }
                 else
                 {
-                    DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(TResponse), SerializerSettings);
-                    TResponse response = ser.ReadObject(serialized) as TResponse;
+                    TResponse response = Serializer.Deserialize<TResponse>(serialized);
                     return new ServiceResponse<TResponse>(response, resp.Headers);
                 }
             }
@@ -204,7 +202,7 @@ namespace Pipopolam.Net
             }
             catch
             {
-                Log($"{BaseHost} Request {id} can't read reponse");
+                Log($"{BaseHost} Request {id} can't read response");
             }
         }
 
@@ -233,9 +231,7 @@ namespace Pipopolam.Net
             {
                 serialized.Seek(0, SeekOrigin.Begin);
 
-                DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(TDefaultError), SerializerSettings);
-
-                if (ser.ReadObject(serialized) is TDefaultError response &&
+                if (Serializer.Deserialize<TDefaultError>(serialized) is TDefaultError response &&
                         (response is IBasicResponse basicResponse) && !basicResponse.Success)
                     throw new WebServiceErrorException<TDefaultError>(response);
             }
@@ -253,9 +249,7 @@ namespace Pipopolam.Net
             {
                 serialized.Seek(0, SeekOrigin.Begin);
 
-                DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(TDefaultError), SerializerSettings);
-
-                if (ser.ReadObject(serialized) is TDefaultError response)
+                if (Serializer.Deserialize<TDefaultError>(serialized) is TDefaultError response)
                     throw new WebServiceRemoteException<TDefaultError>(code, response);
             }
             catch (Exception ex) when (!(ex is WebServiceRemoteException<TDefaultError>))

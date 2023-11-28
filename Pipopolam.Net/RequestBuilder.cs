@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Pipopolam.Net
 {
@@ -197,15 +194,7 @@ namespace Pipopolam.Net
             if (body == null)
                 return null;
 
-            var settings = new DataContractJsonSerializerSettings();
-            DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(TRequest), Service.SerializerSettings);
-            using (MemoryStream stream = new MemoryStream())
-            {
-                ser.WriteObject(stream, body);
-                byte[] arr = stream.ToArray();
-                string t = Encoding.UTF8.GetString(arr, 0, arr.Length);
-                return new StringContent(t, Encoding.UTF8, "application/json");
-            }
+            return Service.Serializer.Serialize(body);
         }
     }
 }

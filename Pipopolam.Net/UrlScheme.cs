@@ -23,7 +23,7 @@ namespace Pipopolam.Net
                 case UrlScheme.Https:
                     return "https";
                 default:
-                    return "";
+                    throw new NotSupportedException($"Scheme {scheme} is not supported!");
             }
         }
 
@@ -36,7 +36,7 @@ namespace Pipopolam.Net
                 case "https":
                     return UrlScheme.Https;
                 default:
-                    return UrlScheme.Http;
+                    throw new NotSupportedException($"Scheme {name} is not supported!");
             }
         }
     }

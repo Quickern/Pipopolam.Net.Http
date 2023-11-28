@@ -5,8 +5,8 @@ namespace Pipopolam.Net
 {
     public class FileContent
     {
-        public string FileName { get; set; }
-        public Stream Stream { get; set; }
+        public string FileName { get; }
+        public Stream Stream { get; }
 
         public FileContent(string fileName, Stream stream)
         {

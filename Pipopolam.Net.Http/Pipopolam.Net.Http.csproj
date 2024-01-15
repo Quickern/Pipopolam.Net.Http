@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+
+    <RootNamespace>Pipopolam.Net.Http</RootNamespace>
+    <Version>0.1.0</Version>
+
+    <PackageId>Pipopolam.Net.Http</PackageId>
+    <PackageTags>Http;REST;HttpClient;Web</PackageTags>
+    <Authors>Basile Picard</Authors>
+    <Description>Pipopolam.Net Http web client library</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../LICENSE" Pack="true" PackagePath=""/>
+  </ItemGroup>  
+
+</Project>

@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 
-namespace Pipopolam.Net
+namespace Pipopolam.Net.Http
 {
     public class RequestBuilder
     {

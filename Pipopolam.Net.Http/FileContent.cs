@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Pipopolam.Net
+namespace Pipopolam.Net.Http
 {
     public class FileContent
     {

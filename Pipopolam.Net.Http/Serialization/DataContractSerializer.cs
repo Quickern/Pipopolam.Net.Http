@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
-namespace Pipopolam.Net.Serialization
+namespace Pipopolam.Net.Http.Serialization
 {
     public class DataContractSerializer : ISerializer
     {

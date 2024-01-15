@@ -10,9 +10,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Diagnostics;
 using System.Threading;
-using Pipopolam.Net.Serialization;
+using Pipopolam.Net.Http.Serialization;
 
-namespace Pipopolam.Net
+namespace Pipopolam.Net.Http
 {
     public abstract class WebService
     {

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Net.Http;
 
-namespace Pipopolam.Net.Serialization
+namespace Pipopolam.Net.Http.Serialization
 {
     public interface ISerializer
     {

@@ -1,10 +1,9 @@
-﻿using System;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pipopolam.Net
+namespace Pipopolam.Net.Http
 {
     public class Request
     {

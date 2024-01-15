@@ -92,9 +92,19 @@ namespace Pipopolam.Net.Http
             return Request<TResult>(HttpMethod.Get);
         }
 
+        public Request<TResult> Get<TResult>(CancellationToken token) where TResult : class
+        {
+            return Request<TResult>(HttpMethod.Get, token);
+        }
+
         public Request Post()
         {
             return Request(HttpMethod.Post);
+        }
+
+        public Request Post(CancellationToken token)
+        {
+            return Request(HttpMethod.Post, token);
         }
 
         public Request<TResponse> Post<TResponse>()
@@ -103,9 +113,20 @@ namespace Pipopolam.Net.Http
             return Request<TResponse>(HttpMethod.Post);
         }
 
+        public Request<TResponse> Post<TResponse>(CancellationToken token)
+            where TResponse : class
+        {
+            return Request<TResponse>(HttpMethod.Post, token);
+        }
+
         public Request Put()
         {
             return Request(HttpMethod.Put);
+        }
+
+        public Request Put(CancellationToken token)
+        {
+            return Request(HttpMethod.Put, token);
         }
 
         public Request<TResponse> Put<TResponse>()
@@ -114,9 +135,20 @@ namespace Pipopolam.Net.Http
             return Request<TResponse>(HttpMethod.Put);
         }
 
+        public Request<TResponse> Put<TResponse>(CancellationToken token)
+            where TResponse : class
+        {
+            return Request<TResponse>(HttpMethod.Put, token);
+        }
+
         public Request Delete()
         {
             return Request(HttpMethod.Delete);
+        }
+
+        public Request Delete(CancellationToken token)
+        {
+            return Request(HttpMethod.Delete, token);
         }
 
         public Request<TResponse> Delete<TResponse>()
@@ -125,10 +157,23 @@ namespace Pipopolam.Net.Http
             return Request<TResponse>(HttpMethod.Delete);
         }
 
+        public Request<TResponse> Delete<TResponse>(CancellationToken token)
+            where TResponse : class
+        {
+            return Request<TResponse>(HttpMethod.Delete, token);
+        }
+
         private Request Request(HttpMethod method)
         {
             CancellationTokenSource source = new CancellationTokenSource();
             return new Request(Service.Request(method, this, source.Token), source);
+        }
+
+        private Request Request(HttpMethod method, CancellationToken token)
+        {
+            CancellationTokenSource requestSource = new CancellationTokenSource();
+            CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
+            return new Request(Service.Request(method, this, source.Token), requestSource);
         }
 
         private Request<TResponse> Request<TResponse>(HttpMethod method)
@@ -136,6 +181,14 @@ namespace Pipopolam.Net.Http
         {
             CancellationTokenSource source = new CancellationTokenSource();
             return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), source);
+        }
+
+        private Request<TResponse> Request<TResponse>(HttpMethod method, CancellationToken token)
+            where TResponse : class
+        {
+            CancellationTokenSource requestSource = new CancellationTokenSource();
+            CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
+            return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), requestSource);
         }
 
         public Uri BuildUrl()

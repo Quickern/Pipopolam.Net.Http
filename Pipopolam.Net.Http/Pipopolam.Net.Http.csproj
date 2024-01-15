@@ -9,12 +9,15 @@
     <PackageId>Pipopolam.Net.Http</PackageId>
     <PackageTags>Http;REST;HttpClient;Web</PackageTags>
     <Authors>Basile Picard</Authors>
-    <Description>Pipopolam.Net Http web client library</Description>
+    <RepositoryUrl>https://github.com/Quickern/Pipopolam.Net.Http</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../LICENSE" Pack="true" PackagePath=""/>
-  </ItemGroup>  
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
 </Project>

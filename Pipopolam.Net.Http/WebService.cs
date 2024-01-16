@@ -29,20 +29,23 @@ namespace Pipopolam.Net.Http
         private CookieContainer _cookies;
         protected CookieContainer Cookies => _cookies ??= new CookieContainer();
 
-        private HttpClientHandler _clientHandler;
-        private HttpClientHandler ClientHandler
+        private HttpMessageHandler _messageHandler;
+        private HttpMessageHandler MessageHandler
         {
             get
             {
-                if (_clientHandler == null)
+                if (_messageHandler == null)
                 {
-                    _clientHandler = CreateHandler();
+                    _messageHandler = CreateHandler();
 
-                    _clientHandler.CookieContainer = Cookies;
-                    _clientHandler.UseCookies = true;
+                    if (_messageHandler is HttpClientHandler clientHandler)
+                    {
+                        clientHandler.CookieContainer = Cookies;
+                        clientHandler.UseCookies = true;
+                    }
                 }
 
-                return _clientHandler;
+                return _messageHandler;
             }
         }
 
@@ -53,7 +56,7 @@ namespace Pipopolam.Net.Http
             {
                 if (_client == null)
                 {
-                    _client = new HttpClient(ClientHandler);
+                    _client = new HttpClient(MessageHandler);
                     if (_critical)
                         _client.Timeout = TimeSpan.FromSeconds(Timeout);
                 }
@@ -70,7 +73,7 @@ namespace Pipopolam.Net.Http
             _critical = critical;
         }
 
-        protected virtual HttpClientHandler CreateHandler() => new HttpClientHandler();
+        protected virtual HttpMessageHandler CreateHandler() => new HttpClientHandler();
         protected virtual ISerializer CreateSerializer() => new DataContractSerializer();
 
         /// <summary>

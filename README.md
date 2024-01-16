@@ -1,5 +1,7 @@
 # Pipopolam.Net Http web client library
 
+[![NuGet Status](https://img.shields.io/nuget/v/Pipopolam.Net.Http)](https://www.nuget.org/packages/Pipopolam.Net.Http/)
+
 ## Example
 
     [DataContract]
@@ -16,7 +18,7 @@
     {
         public override string BaseHost => "example.com";
 
-        protected override void GenericServicePath(RequestBuilder builder) => builder.AddSegment("service);
+        protected override void GenericServicePath(RequestBuilder builder) => builder.AddSegment("service");
     }
 
     [DataContract]

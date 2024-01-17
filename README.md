@@ -1,7 +1,7 @@
 # Pipopolam.Net Http web client library
 
 [![NuGet Status](https://img.shields.io/nuget/v/Pipopolam.Net.Http)](https://www.nuget.org/packages/Pipopolam.Net.Http/)
-[![.NET](https://github.com/Quickern/Pipopolam.Net.Http/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Quickern/Pipopolam.Net.Http/actions/workflows/dotnet.yml)
+[![.NET](https://github.com/Quickern/Pipopolam.Net.Http/actions/workflows/build.yml/badge.svg)](https://github.com/Quickern/Pipopolam.Net.Http/actions/workflows/build.yml)
 
 ## Example
 

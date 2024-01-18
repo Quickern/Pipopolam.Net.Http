@@ -36,7 +36,7 @@ jobs:
     - name: Test
       run: dotnet test -c Release --no-build --verbosity normal
     - name: Pack
-      run: dotnet pack -c Reslease --no-build --output ${{ env.NuGetDirectory }}
+      run: dotnet pack -c Release --no-build --output ${{ env.NuGetDirectory }}
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:

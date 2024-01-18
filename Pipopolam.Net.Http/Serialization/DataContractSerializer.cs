@@ -1,8 +1,9 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Net.Http;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Pipopolam.Net.Http.Serialization
 {
@@ -29,10 +30,13 @@ namespace Pipopolam.Net.Http.Serialization
             }
         }
 
-        public T Deserialize<T>(Stream stream) where T : class
+        public Task<T> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
         {
-            DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
-            return ser.ReadObject(stream) as T;
+            return Task.Run(() =>
+            {
+                DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
+                return ser.ReadObject(stream) as T;
+            }, cancellationToken);
         }
     }
 }

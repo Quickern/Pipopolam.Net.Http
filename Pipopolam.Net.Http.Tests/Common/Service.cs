@@ -1,18 +1,22 @@
 ﻿
+using Pipopolam.Net.Http.Serialization;
 using RichardSzalay.MockHttp;
 
 namespace Pipopolam.Net.Http.Tests.Common;
 
 public class Service : WebService<Error>
 {
-    private MockHttpMessageHandler _handler;
+    private readonly Func<ISerializer>? _serializerFactory;
+
+    public MockHttpMessageHandler Handler { get; } = new MockHttpMessageHandler();
 
     public override string BaseHost => "localhost:2718";
-    protected override HttpMessageHandler CreateHandler() => _handler;
+    protected override HttpMessageHandler CreateHandler() => Handler;
+    protected override ISerializer CreateSerializer() => _serializerFactory?.Invoke() ?? base.CreateSerializer();
 
-    public Service(MockHttpMessageHandler handler)
+    public Service(Func<ISerializer>? serializerFactory = null)
     {
-        _handler = handler;
+        _serializerFactory = serializerFactory;
     }
 
     protected override void GenericServicePath(RequestBuilder builder)

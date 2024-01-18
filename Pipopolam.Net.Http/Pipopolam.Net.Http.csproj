@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFrameworks>netstandard2.1;netcoreapp3.0</TargetFrameworks>
 
     <RootNamespace>Pipopolam.Net.Http</RootNamespace>
     <Version>0.1.0</Version>
 
     <PackageId>Pipopolam.Net.Http</PackageId>
-    <PackageTags>Http;REST;HttpClient;Web</PackageTags>
+    <PackageTags>Http;REST;HttpClient;Web;API</PackageTags>
     <Authors>Basile Picard</Authors>
+    <Description>Main goal of this library is to simplify client code HTTP-based APIs requests (e.g. REST, etc.)</Description>
     <RepositoryUrl>https://github.com/Quickern/Pipopolam.Net.Http</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -18,6 +19,10 @@
 
   <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' != 'netcoreapp3.0' ">
+    <Compile Remove="Serialization/NetJsonSerializer.cs" />
   </ItemGroup>
 
 </Project>

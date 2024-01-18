@@ -4,7 +4,6 @@
     <TargetFrameworks>netstandard2.1;netcoreapp3.0</TargetFrameworks>
 
     <RootNamespace>Pipopolam.Net.Http</RootNamespace>
-    <Version>0.1.0</Version>
 
     <PackageId>Pipopolam.Net.Http</PackageId>
     <PackageTags>Http;REST;HttpClient;Web;API</PackageTags>

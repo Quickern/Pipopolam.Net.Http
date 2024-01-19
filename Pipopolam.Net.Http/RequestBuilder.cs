@@ -19,7 +19,7 @@ namespace Pipopolam.Net.Http
 
         public WebService Service { get; private set; }
 
-        public RequestBuilder(WebService service) 
+        public RequestBuilder(WebService service)
         {
             Service = service;
         }
@@ -104,7 +104,7 @@ namespace Pipopolam.Net.Http
 
         /// <summary>
         /// Adds body to the request.
-        /// 
+        ///
         /// <typeparamref name="TRequest"/> is used to determine how to serialize the <paramref name="body"/> using next logic:
         /// <list type="number">
         /// <item>When <typeparamref name="TRequest"/> is <see cref="Stream"/> binary format will be used.</item>
@@ -269,7 +269,7 @@ namespace Pipopolam.Net.Http
         {
             CancellationTokenSource requestSource = new CancellationTokenSource();
             CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
-            return new Request(Service.Request(method, this, source.Token), requestSource);
+            return new Request(Service.Request(method, this, source.Token), requestSource, source);
         }
 
         private Request<TResponse> Request<TResponse>(HttpMethod method)
@@ -284,7 +284,7 @@ namespace Pipopolam.Net.Http
         {
             CancellationTokenSource requestSource = new CancellationTokenSource();
             CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
-            return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), requestSource);
+            return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), requestSource, source);
         }
 
         public Uri BuildUrl()

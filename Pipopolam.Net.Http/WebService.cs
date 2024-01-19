@@ -272,15 +272,10 @@ namespace Pipopolam.Net.Http
         }
     }
 
-    public interface IBasicResponse
-    {
-        bool Success { get; }
-    }
-
     public abstract class WebService<TDefaultError> : WebService
         where TDefaultError: class
     {
-        protected override bool PrehandleErrors => typeof(TDefaultError).IsAssignableFrom(typeof(IBasicResponse));
+        protected override bool PrehandleErrors => typeof(IBasicResponse).IsAssignableFrom(typeof(TDefaultError));
 
         protected WebService(bool critical = true) : base(critical) { }
 
@@ -317,83 +312,6 @@ namespace Pipopolam.Net.Http
 
                 await base.ErrorHandler(serialized, token);
             }
-        }
-    }
-
-    public class ServiceResponse
-    {
-        public HttpResponseHeaders Headers { get; private set; }
-
-        public ServiceResponse(HttpResponseHeaders headers)
-        {
-            Headers = headers;
-        }
-    }
-
-    public class ServiceResponse<T> : ServiceResponse
-    {
-        public T Data { get; private set; }
-
-        public ServiceResponse(T data, HttpResponseHeaders headers) : base(headers)
-        {
-            Data = data;
-        }
-    }
-
-    public class WebServiceException : Exception
-    {
-        public WebServiceException() { }
-
-        public WebServiceException(string message) : base(message) { }
-
-        public WebServiceException(string message, Exception innerException) : base(message, innerException) { }
-    }
-
-    public class WebServiceNoConnectionException : WebServiceException
-    {
-        public WebServiceNoConnectionException(Exception innerException) : base("Can't connect to service", innerException) { }
-    }
-
-    public class WebServiceErrorException : WebServiceException
-    {
-        public string Response { get; private set; }
-
-        public WebServiceErrorException(string response)
-        {
-            Response = response;
-        }
-    }
-
-    public class WebServiceErrorException<T> : WebServiceException
-        where T: class
-    {
-        public T Response { get; private set; }
-
-        public WebServiceErrorException(T response)
-        {
-            Response = response;
-        }
-    }
-
-    public class WebServiceRemoteException : WebServiceErrorException
-    {
-        public HttpStatusCode StatusCode { get; private set; }
-
-        public WebServiceRemoteException(HttpStatusCode statusCode, string response) :
-            base(response)
-        {
-            StatusCode = statusCode;
-        }
-    }
-
-    public class WebServiceRemoteException<T> : WebServiceErrorException<T> where T: class
-    {
-        public HttpStatusCode StatusCode { get; private set; }
-
-        public WebServiceRemoteException(HttpStatusCode statusCode, T response) :
-            base(response)
-        {
-            StatusCode = statusCode;
         }
     }
 }

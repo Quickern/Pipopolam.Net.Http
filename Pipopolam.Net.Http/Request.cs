@@ -34,11 +34,19 @@ namespace Pipopolam.Net.Http
             Headers = response.Headers;
         }
 
+        /// <summary>
+        /// Cancels request.
+        /// </summary>
         public void Cancel() => _cancellationTokenSource.Cancel();
+
+        /// <summary>
+        /// Converts request to task.
+        /// </summary>
+        public Task ToTask() => Task;
 
         public static implicit operator Task(Request request)
         {
-            return request.Task;
+            return request.ToTask();
         }
     }
 

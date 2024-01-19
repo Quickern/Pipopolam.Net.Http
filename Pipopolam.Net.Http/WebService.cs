@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 using System.Net;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Diagnostics;
 using System.Threading;
 using Pipopolam.Net.Http.Serialization;
 
 namespace Pipopolam.Net.Http
 {
-    public abstract class WebService
+    public abstract class WebService : IDisposable
     {
         public const double Timeout = 2;
 
         private readonly bool _critical;
+        private CancellationTokenSource _allRequestsTokenSource = new CancellationTokenSource();
 
         private int requestId = 0;
 
@@ -122,19 +122,37 @@ namespace Pipopolam.Net.Http
         /// <param name="builder">Url builder</param>
         protected abstract void GenericServicePath(RequestBuilder builder);
 
+        /// <summary>
+        /// Cancels all current requests. You can send new requests after that.
+        /// </summary>
+        public void Close()
+        {
+            CancellationTokenSource tcs = Interlocked.Exchange(ref _allRequestsTokenSource, new CancellationTokenSource());
+            tcs.Cancel();
+            tcs.Dispose();
+        }
+
+        public void Dispose()
+        {
+            _allRequestsTokenSource.Cancel();
+            _client?.Dispose();
+            _allRequestsTokenSource.Dispose();
+        }
+
         public async Task<ServiceResponse> Request(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
         {
             int id = Interlocked.Increment(ref requestId);
-            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
-            if (method == HttpMethod.Post && requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-            {
-                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
-            }
 
-            HttpResponseMessage resp = await RequestInternal(method, requestInfo, token);
+            using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
+
+            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
+            if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
+                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+
+            HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
             if (PrehandleErrors)
-                await ErrorHandler(await resp.Content.ReadAsStreamAsync(), token);
+                await ErrorHandler(await resp.Content.ReadAsStreamAsync(), tcs.Token);
 
             return new ServiceResponse(resp.Headers);
         }
@@ -143,23 +161,20 @@ namespace Pipopolam.Net.Http
             where TResponse : class
         {
             int id = Interlocked.Increment(ref requestId);
-            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
-            if (method == HttpMethod.Post && requestInfo.Content != null)
-            {
-                if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-                {
-                    string body = await requestInfo.Content.ReadAsStringAsync();
-                    Log($"{BaseHost} Request {id} body: {body}");
-                }
-            }
 
-            HttpResponseMessage resp = await RequestInternal(method, requestInfo, token);
+            using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
+
+            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
+            if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
+                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+
+            HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
             Stream serialized = await resp.Content.ReadAsStreamAsync();
             LogResponse(id, serialized);
 
             if (PrehandleErrors)
-                await ErrorHandler(serialized, token);
+                await ErrorHandler(serialized, tcs.Token);
 
             try
             {
@@ -172,7 +187,7 @@ namespace Pipopolam.Net.Http
                 }
                 else
                 {
-                    TResponse response = await Serializer.DeserializeAsync<TResponse>(serialized, token);
+                    TResponse response = await Serializer.DeserializeAsync<TResponse>(serialized, tcs.Token);
                     return new ServiceResponse<TResponse>(response, resp.Headers);
                 }
             }
@@ -180,7 +195,7 @@ namespace Pipopolam.Net.Http
             {
                 Log("[Error] Error while parsing response: " + ex);
 
-                await ErrorHandler(serialized, token);
+                await ErrorHandler(serialized, tcs.Token);
                 return null;
             }
         }

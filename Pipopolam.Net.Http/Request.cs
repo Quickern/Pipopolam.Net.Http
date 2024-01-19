@@ -1,48 +1,69 @@
-﻿using System.Net.Http.Headers;
+﻿using System;
+using System.Net.Http.Headers;
+using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pipopolam.Net.Http
 {
-    public class Request
+    public class Request : IDisposable
     {
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        private readonly Task _task;
+        private CancellationTokenSource _cancellationTokenSource;
+        private CancellationTokenSource _linkedSource;
 
-        protected virtual Task Task => _task;
+        private protected Task Task { get; set; }
 
         public HttpResponseHeaders Headers { get; protected set; }
 
-        protected Request(CancellationTokenSource cancellationTokenSource)
+        private protected Request(CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource)
         {
             _cancellationTokenSource = cancellationTokenSource;
+            _linkedSource = linkedSource;
         }
 
-        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource):
-            this(cancellationTokenSource)
+        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource = null) :
+            this(cancellationTokenSource, linkedSource)
         {
-            _task = RequestWrapper(task);
+            Task = RequestWrapper(task);
         }
 
         public TaskAwaiter GetAwaiter() => Task.GetAwaiter();
 
         private async Task RequestWrapper(Task<ServiceResponse> task)
         {
-            ServiceResponse response = await task;
+            try
+            {
+                ServiceResponse response = await task;
 
-            Headers = response.Headers;
+                Headers = response.Headers;
+            }
+            finally
+            {
+                Clear();
+            }
+        }
+
+        private protected void Clear()
+        {
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = null;
+
+            _linkedSource?.Dispose();
+            _linkedSource = null;
         }
 
         /// <summary>
         /// Cancels request.
         /// </summary>
-        public void Cancel() => _cancellationTokenSource.Cancel();
+        public void Cancel() => _cancellationTokenSource?.Cancel();
 
         /// <summary>
         /// Converts request to task.
         /// </summary>
         public Task ToTask() => Task;
+
+        public void Dispose() => Cancel();
 
         public static implicit operator Task(Request request)
         {
@@ -52,32 +73,42 @@ namespace Pipopolam.Net.Http
 
     public class Request<T> : Request where T: class
     {
-        private readonly Task<T> _task;
+        private new Task<T> Task { get; }
 
-        protected override Task Task => _task;
+        public T Result => Task.Result;
 
-        public T Result => _task.Result;
-
-        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource) :
-            base(cancellationTokenSource)
+        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource = null) :
+            base(cancellationTokenSource, linkedSource)
         {
-            this._task = RequestWrapper(task);
+            base.Task = Task = RequestWrapper(task);
         }
 
-        public new TaskAwaiter<T> GetAwaiter() => _task.GetAwaiter();
+        public new TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
 
         private async Task<T> RequestWrapper(Task<ServiceResponse<T>> task)
         {
-            ServiceResponse<T> response = await task;
+            try
+            {
+                ServiceResponse<T> response = await task;
 
-            Headers = response.Headers;
+                Headers = response.Headers;
 
-            return response?.Data;
+                return response?.Data;
+            }
+            finally
+            {
+                Clear();
+            }
         }
+
+        /// <summary>
+        /// Converts request to task.
+        /// </summary>
+        public new Task<T> ToTask() => Task;
 
         public static implicit operator Task<T>(Request<T> request)
         {
-            return request._task;
+            return request.ToTask();
         }
     }
 }

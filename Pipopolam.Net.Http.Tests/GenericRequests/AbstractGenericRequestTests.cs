@@ -71,7 +71,7 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
 
         using (PreventAutoFlush())
         {
-            Request request = Service.CreateRequest()
+            using Request request = Service.CreateRequest()
                 .AddSegment("test_cancel")
                 .AddSegment("by_request")
                 .Get<Data>();
@@ -97,7 +97,7 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
         {
             using CancellationTokenSource tcs = new CancellationTokenSource();
 
-            Request request = Service.CreateRequest()
+            using Request request = Service.CreateRequest()
                 .AddSegment("test_cancel")
                 .AddSegment("by_token")
                 .Get<Data>(tcs.Token);
@@ -110,6 +110,35 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
             }
 
             await Task.WhenAll(Assert.ThrowsAsync<TaskCanceledException>(() => request), CancelAndFlush());
+        }
+    }
+
+    [Fact]
+    public async Task AllRequestsCancellation()
+    {
+        Handler.When("https://localhost:2718/service/test_cancel/all")
+            .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
+
+        using (PreventAutoFlush())
+        {
+            RequestBuilder builder = Service.CreateRequest()
+                .AddSegment("test_cancel")
+                .AddSegment("all");
+
+            Request[] requests = [ builder.Get<Data>(), builder.Get<Data>(), builder.Get<Data>() ];
+
+            async Task CancelAndFlush()
+            {
+                await Task.Yield();
+                Service.Close();
+                Handler.Flush();
+            }
+
+            await Task.WhenAll(requests.Select(r => Assert.ThrowsAsync<TaskCanceledException>(() => r))
+                .Append(CancelAndFlush()));
+
+            foreach (Request request in requests)
+                request.Dispose();
         }
     }
 }

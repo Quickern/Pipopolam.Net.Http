@@ -4,7 +4,7 @@ using RichardSzalay.MockHttp;
 
 namespace Pipopolam.Net.Http.Tests.Common;
 
-public class Service : WebService<Error>
+public class Service<TError> : WebService<TError> where TError : class
 {
     private readonly Func<ISerializer>? _serializerFactory;
 

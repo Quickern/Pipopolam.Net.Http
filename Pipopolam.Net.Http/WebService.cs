@@ -127,7 +127,7 @@ namespace Pipopolam.Net.Http
             int id = Interlocked.Increment(ref requestId);
             Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
             if (method == HttpMethod.Post && requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-            { 
+            {
                 Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
             }
 
@@ -156,7 +156,6 @@ namespace Pipopolam.Net.Http
             HttpResponseMessage resp = await RequestInternal(method, requestInfo, token);
 
             Stream serialized = await resp.Content.ReadAsStreamAsync();
-
             LogResponse(id, serialized);
 
             if (PrehandleErrors)

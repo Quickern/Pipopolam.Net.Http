@@ -2,21 +2,10 @@ using System.Net;
 using Pipopolam.Net.Http.Tests.Common;
 using RichardSzalay.MockHttp;
 
-namespace Pipopolam.Net.Http.Tests;
+namespace Pipopolam.Net.Http.Tests.GenericRequests;
 
-public abstract class AbstractGenericRequestTests
+public abstract class AbstractGenericRequestTests(Service<Error> service) : AbstractTests<Error>(service)
 {
-    private readonly Service _service;
-    private readonly PreventAutoFlush _preventAutoFlush;
-
-    protected MockHttpMessageHandler Handler => _service.Handler;
-
-    protected AbstractGenericRequestTests(Service service)
-    {
-        _service = service;
-        _preventAutoFlush = new PreventAutoFlush(this);
-    }
-
     [Fact]
     public async Task SimpleGet()
     {
@@ -24,7 +13,7 @@ public abstract class AbstractGenericRequestTests
             .With(r => r.Method == HttpMethod.Get)
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        Data data = await _service.CreateRequest().AddSegment("test_get").Get<Data>();
+        Data data = await Service.CreateRequest().AddSegment("test_get").Get<Data>();
         Assert.Equal("Test message", data.SomeMessage);
     }
 
@@ -38,7 +27,7 @@ public abstract class AbstractGenericRequestTests
             .WithJsonContent(data)
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        Data result = await _service.CreateRequest().AddSegment("test_post").Body(data).Post<Data>();
+        Data result = await Service.CreateRequest().AddSegment("test_post").Body(data).Post<Data>();
         Assert.Equal("Test message", result.SomeMessage);
     }
 
@@ -49,12 +38,12 @@ public abstract class AbstractGenericRequestTests
             .With(r => r.Method == HttpMethod.Get)
             .Respond("application/json", "[ { \"SomeMessage\" : \"Test message\" },  { \"SomeMessage\" : \"Test message 2\" } ]");
 
-        Data[] data = await _service.CreateRequest().AddSegment("test_get_array").Get<Data[]>();
+        Data[] data = await Service.CreateRequest().AddSegment("test_get_array").Get<Data[]>();
         Assert.Equal(2, data.Length);
         Assert.Equal("Test message", data[0].SomeMessage);
         Assert.Equal("Test message 2", data[1].SomeMessage);
 
-        List<Data> dataList = await _service.CreateRequest().AddSegment("test_get_array").Get<List<Data>>();
+        List<Data> dataList = await Service.CreateRequest().AddSegment("test_get_array").Get<List<Data>>();
         Assert.Equal(2, dataList.Count);
         Assert.Equal("Test message", dataList[0].SomeMessage);
         Assert.Equal("Test message 2", dataList[1].SomeMessage);
@@ -67,7 +56,7 @@ public abstract class AbstractGenericRequestTests
             .Respond(HttpStatusCode.BadRequest, "application/json", "{ \"Code\": 314, \"Message\" : \"Error 314\" }");
 
         WebServiceRemoteException<Error> ex = await Assert.ThrowsAsync<WebServiceRemoteException<Error>>(async () =>
-            await _service.CreateRequest().AddSegment("test_error").Post());
+            await Service.CreateRequest().AddSegment("test_error").Post());
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Equal(314, ex.Response.Code);
@@ -80,9 +69,9 @@ public abstract class AbstractGenericRequestTests
         Handler.When("https://localhost:2718/service/test_cancel/by_request")
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        using (_preventAutoFlush.Wait())
+        using (PreventAutoFlush())
         {
-            Request request = _service.CreateRequest()
+            Request request = Service.CreateRequest()
                 .AddSegment("test_cancel")
                 .AddSegment("by_request")
                 .Get<Data>();
@@ -104,11 +93,11 @@ public abstract class AbstractGenericRequestTests
         Handler.When("https://localhost:2718/service/test_cancel/by_token")
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        using (_preventAutoFlush.Wait())
+        using (PreventAutoFlush())
         {
             using CancellationTokenSource tcs = new CancellationTokenSource();
 
-            Request request = _service.CreateRequest()
+            Request request = Service.CreateRequest()
                 .AddSegment("test_cancel")
                 .AddSegment("by_token")
                 .Get<Data>(tcs.Token);
@@ -121,20 +110,6 @@ public abstract class AbstractGenericRequestTests
             }
 
             await Task.WhenAll(Assert.ThrowsAsync<TaskCanceledException>(() => request), CancelAndFlush());
-        }
-    }
-
-    private class PreventAutoFlush(AbstractGenericRequestTests tests) : IDisposable
-    {
-        public PreventAutoFlush Wait()
-        {
-            tests.Handler.AutoFlush = false;
-            return this;
-        }
-
-        public void Dispose()
-        {
-            tests.Handler.AutoFlush = true;
         }
     }
 }

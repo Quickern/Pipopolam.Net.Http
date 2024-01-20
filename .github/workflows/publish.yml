@@ -16,8 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.nbgv.outputs.SemVer2 }}
+      prereleaseVersion: ${{ steps.nbgv.outputs.PrereleaseVersion }}
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
     - name: Setup .NET
@@ -42,7 +44,8 @@ jobs:
         if-no-files-found: error
         retention-days: 7
         path: ${{ env.NuGetDirectory }}/*.nupkg
-    - uses: rickstaa/action-create-tag@v1
+    - name: Create Git Tag
+      uses: rickstaa/action-create-tag@v1
       id: tag_create
       with:
         tag: "release/${{ steps.nbgv.outputs.SemVer2 }}"
@@ -54,7 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: create_package
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
         with:
           name: NuGet
           path: ${{ env.NuGetDirectory }}
@@ -75,14 +79,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
         with:
           name: NuGet
           path: ${{ env.NuGetDirectory }}
+      - name: Check For Prerelease
+        id: prerelease_check
+        shell: bash
+        run: |
+          if [ "${{ needs.create_package.outputs.prereleaseVersion }}" != '' ]; then
+            echo "isPrerelease=true" >> $GITHUB_OUTPUT;
+          else
+            echo "isPrerelease=false" >> $GITHUB_OUTPUT;
+          fi
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           name: "Release ${{ needs.create_package.outputs.version }}"
           generate_release_notes: true
+          prerelease: ${{ steps.prerelease_check.outputs.isPrerelease }}
           tag_name: release/${{ needs.create_package.outputs.version }}
           files: ${{ env.NuGetDirectory }}/*.nupkg

@@ -10,6 +10,7 @@
     <PackageTags>Http;REST;HttpClient;Web;API</PackageTags>
     <Authors>Basile Picard</Authors>
     <Description>Main goal of this library is to simplify client code HTTP-based APIs requests (e.g. REST, etc.)</Description>
+    <PackageReleaseNotes>The release notes are available at https://github.com/Quickern/Pipopolam.Net.Http/releases.</PackageReleaseNotes>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

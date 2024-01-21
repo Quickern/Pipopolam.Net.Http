@@ -10,6 +10,8 @@ using System.Net.Http;
 using System.Diagnostics;
 using System.Threading;
 using Pipopolam.Net.Http.Serialization;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Pipopolam.Net.Http
 {
@@ -23,21 +25,21 @@ namespace Pipopolam.Net.Http
         private int requestId = 0;
 
         /// <summary>
-        /// Base host for all requests.
-        /// </summary>
-        public abstract string BaseHost { get; }
-
-        /// <summary>
         /// Override this to try to deserialize error first. Some protocols uses 200 (OK) response with error data instead of correct response.
         /// </summary>
         protected virtual bool PrehandleErrors => false;
 
         protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
 
-        private CookieContainer _cookies;
+        /// <summary>
+        /// Base host for all requests.
+        /// </summary>
+        public abstract string BaseHost { get; }
+
+        private CookieContainer? _cookies;
         protected CookieContainer Cookies => _cookies ??= new CookieContainer();
 
-        private HttpMessageHandler _messageHandler;
+        private HttpMessageHandler? _messageHandler;
         private HttpMessageHandler MessageHandler
         {
             get
@@ -57,7 +59,7 @@ namespace Pipopolam.Net.Http
             }
         }
 
-        private HttpClient _client;
+        private HttpClient? _client;
         private HttpClient Client
         {
             get
@@ -73,7 +75,7 @@ namespace Pipopolam.Net.Http
             }
         }
 
-        private ISerializer _serializer;
+        private ISerializer? _serializer;
         public ISerializer Serializer => _serializer ??= CreateSerializer();
 
         /// <summary>
@@ -181,13 +183,15 @@ namespace Pipopolam.Net.Http
                 serialized.Seek(0, SeekOrigin.Begin);
                 if (typeof(TResponse) == typeof(string))
                 {
-                    TextReader reader = new StreamReader(serialized);
-                    string response = reader.ReadToEnd();
-                    return new ServiceResponse<TResponse>(response as TResponse, resp.Headers);
+                    using (TextReader reader = new StreamReader(serialized))
+                    {
+                        string response = await reader.ReadToEndAsync();
+                        return new ServiceResponse<TResponse>(response as TResponse, resp.Headers);
+                    }
                 }
                 else
                 {
-                    TResponse response = await Serializer.DeserializeAsync<TResponse>(serialized, tcs.Token);
+                    TResponse? response = await Serializer.DeserializeAsync<TResponse>(serialized, tcs.Token);
                     return new ServiceResponse<TResponse>(response, resp.Headers);
                 }
             }
@@ -196,27 +200,28 @@ namespace Pipopolam.Net.Http
                 Log("[Error] Error while parsing response: " + ex);
 
                 await ErrorHandler(serialized, tcs.Token);
-                return null;
+                throw new WebServiceException("Error while parsing response", ex);
             }
         }
 
-        private string ParseError(Stream serialized)
+        private async Task<string> ParseError(Stream serialized)
         {
             serialized.Seek(0, SeekOrigin.Begin);
             using (TextReader reader = new StreamReader(serialized))
             {
-                return reader.ReadToEnd();
+                return await reader.ReadToEndAsync();
             }
         }
 
-        protected virtual Task ErrorHandler(Stream serialized, CancellationToken token)
+        private protected virtual async Task ErrorHandler(Stream serialized, CancellationToken token)
         {
-            throw new WebServiceErrorException(ParseError(serialized));
+            throw new WebServiceErrorException(await ParseError(serialized));
         }
 
-        protected virtual Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
+        [DoesNotReturn]
+        private protected virtual async Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
-            throw new WebServiceRemoteException(code, ParseError(serialized));
+            throw new WebServiceRemoteException(code, await ParseError(serialized));
         }
 
         private async Task<HttpResponseMessage> RequestInternal(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
@@ -224,7 +229,7 @@ namespace Pipopolam.Net.Http
             token.ThrowIfCancellationRequested();
 
             HttpRequestMessage request = new HttpRequestMessage(method, requestInfo.BuildUrl());
-            foreach (var kvp in requestInfo.Headers)
+            foreach (KeyValuePair<string, string?> kvp in requestInfo.Headers)
             {
                 request.Headers.Add(kvp.Key, kvp.Value);
             }
@@ -293,7 +298,7 @@ namespace Pipopolam.Net.Http
 
         protected WebService(bool critical = true) : base(critical) { }
 
-        protected override async Task ErrorHandler(Stream serialized, CancellationToken token)
+        private protected override async Task ErrorHandler(Stream serialized, CancellationToken token)
         {
             try
             {
@@ -303,15 +308,16 @@ namespace Pipopolam.Net.Http
                         (response is IBasicResponse basicResponse) && !basicResponse.Success)
                     throw new WebServiceErrorException<TDefaultError>(response);
             }
-            catch (Exception ex) when (!(ex is WebServiceErrorException<TDefaultError>))
+            catch (Exception ex) when (!(ex is WebServiceException))
             {
-                Log("[Error] while parsing error: " + ex);
+                Log("[Error] Error while parsing error: " + ex);
 
                 await base.ErrorHandler(serialized, token);
             }
         }
 
-        protected override async Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
+        [DoesNotReturn]
+        private protected override async Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
             try
             {
@@ -319,12 +325,14 @@ namespace Pipopolam.Net.Http
 
                 if (await Serializer.DeserializeAsync<TDefaultError>(serialized, token) is TDefaultError response)
                     throw new WebServiceRemoteException<TDefaultError>(code, response);
-            }
-            catch (Exception ex) when (!(ex is WebServiceRemoteException<TDefaultError>))
-            {
-                Log("[Error] while parsing error: " + ex);
 
-                await base.ErrorHandler(serialized, token);
+                await base.RemoteErrorHandler(code, serialized, token);
+            }
+            catch (Exception ex) when (!(ex is WebServiceException))
+            {
+                Log("[Error] Error while parsing remote error: " + ex);
+
+                await base.RemoteErrorHandler(code, serialized, token);
             }
         }
     }

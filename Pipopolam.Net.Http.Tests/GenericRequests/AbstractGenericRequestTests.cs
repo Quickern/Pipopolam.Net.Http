@@ -13,7 +13,8 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
             .With(r => r.Method == HttpMethod.Get)
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        Data data = await Service.CreateRequest().AddSegment("test_get").Get<Data>();
+        Data? data = await Service.CreateRequest().AddSegment("test_get").Get<Data>();
+        Assert.NotNull(data);
         Assert.Equal("Test message", data.SomeMessage);
     }
 
@@ -27,7 +28,8 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
             .WithJsonContent(data)
             .Respond("application/json", "{ \"SomeMessage\" : \"Test message\" }");
 
-        Data result = await Service.CreateRequest().AddSegment("test_post").Body(data).Post<Data>();
+        Data? result = await Service.CreateRequest().AddSegment("test_post").Body(data).Post<Data>();
+        Assert.NotNull(result);
         Assert.Equal("Test message", result.SomeMessage);
     }
 
@@ -38,12 +40,22 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
             .With(r => r.Method == HttpMethod.Get)
             .Respond("application/json", "[ { \"SomeMessage\" : \"Test message\" },  { \"SomeMessage\" : \"Test message 2\" } ]");
 
-        Data[] data = await Service.CreateRequest().AddSegment("test_get_array").Get<Data[]>();
+        Data[]? data = await Service.CreateRequest().AddSegment("test_get_array").Get<Data[]>();
+        Assert.NotNull(data);
         Assert.Equal(2, data.Length);
         Assert.Equal("Test message", data[0].SomeMessage);
         Assert.Equal("Test message 2", data[1].SomeMessage);
+    }
 
-        List<Data> dataList = await Service.CreateRequest().AddSegment("test_get_array").Get<List<Data>>();
+    [Fact]
+    public async Task GetList()
+    {
+        Handler.When("https://localhost:2718/service/test_get_array")
+            .With(r => r.Method == HttpMethod.Get)
+            .Respond("application/json", "[ { \"SomeMessage\" : \"Test message\" },  { \"SomeMessage\" : \"Test message 2\" } ]");
+
+        List<Data>? dataList = await Service.CreateRequest().AddSegment("test_get_array").Get<List<Data>>();
+        Assert.NotNull(dataList);
         Assert.Equal(2, dataList.Count);
         Assert.Equal("Test message", dataList[0].SomeMessage);
         Assert.Equal("Test message 2", dataList[1].SomeMessage);
@@ -61,6 +73,19 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Equal(314, ex.Response.Code);
         Assert.Equal("Error 314", ex.Response.Message);
+    }
+
+    [Fact]
+    public async Task IncorrectErrorHandling()
+    {
+        Handler.When("https://localhost:2718/service/test_error")
+            .Respond(HttpStatusCode.BadRequest, "application/json", "Not OK");
+
+        WebServiceRemoteException ex = await Assert.ThrowsAsync<WebServiceRemoteException>(async () =>
+            await Service.CreateRequest().AddSegment("test_error").Post());
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Equal("Not OK", ex.Response);
     }
 
     [Fact]

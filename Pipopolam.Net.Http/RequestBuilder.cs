@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -10,12 +11,12 @@ namespace Pipopolam.Net.Http
     public class RequestBuilder
     {
         public UrlScheme Scheme { get; private set; } = UrlScheme.Https;
-        public string Host { get; private set; }
+        public string? Host { get; private set; }
         public int? Port { get; private set; } = null;
         public IEnumerable<string> Segments { get; private set; } = new List<string>();
         public IEnumerable<QueryParameter> QueryParameters { get; private set; } = new List<QueryParameter>();
-        public IDictionary<string, string> Headers { get; private set; } = new Dictionary<string, string>();
-        public HttpContent Content { get; private set; }
+        public IDictionary<string, string?> Headers { get; private set; } = new Dictionary<string, string?>();
+        public HttpContent? Content { get; private set; }
 
         public WebService Service { get; private set; }
 
@@ -41,7 +42,7 @@ namespace Pipopolam.Net.Http
             return this;
         }
 
-        public RequestBuilder SetHost(string host)
+        public RequestBuilder SetHost([NotNull] string host)
         {
             Host = host;
             return this;
@@ -65,7 +66,7 @@ namespace Pipopolam.Net.Http
         {
             if (String.IsNullOrWhiteSpace(segment))
                 throw new InvalidOperationException("Empty url segment");
-            (Segments as IList<string>).Add(segment);
+            ((IList<string>)Segments).Add(segment);
             return this;
         }
 
@@ -87,16 +88,16 @@ namespace Pipopolam.Net.Http
         /// <summary>
         /// Adds query parameter.
         /// </summary>
-        public RequestBuilder AddQueryParameter(string key, string value)
+        public RequestBuilder AddQueryParameter(string key, string? value)
         {
-            (QueryParameters as IList<QueryParameter>).Add(new QueryParameter(key, value));
+            ((IList<QueryParameter>)QueryParameters).Add(new QueryParameter(key, value));
             return this;
         }
 
         /// <summary>
         /// Add custom header to the request.
         /// </summary>
-        public RequestBuilder AddHeader(string key, string value)
+        public RequestBuilder AddHeader(string key, string? value)
         {
             Headers[key] = value;
             return this;
@@ -113,7 +114,7 @@ namespace Pipopolam.Net.Http
         /// <item>For any other case <see cref="WebService.Serializer"/> will be used to serialized <paramref name="body"/>.</item>
         /// </list>
         /// </summary>
-        public RequestBuilder Body<TRequest>(TRequest body) where TRequest : class
+        public RequestBuilder Body<TRequest>(TRequest? body) where TRequest : class
         {
             Content = CreateContent(body);
             return this;
@@ -162,8 +163,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Post<TResponse>()
-            where TResponse : class
+        public Request<TResponse> Post<TResponse>() where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Post);
         }
@@ -173,8 +173,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Post<TResponse>(CancellationToken token)
-            where TResponse : class
+        public Request<TResponse> Post<TResponse>(CancellationToken token) where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Post, token);
         }
@@ -202,8 +201,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Put<TResponse>()
-            where TResponse : class
+        public Request<TResponse> Put<TResponse>() where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Put);
         }
@@ -213,8 +211,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Put<TResponse>(CancellationToken token)
-            where TResponse : class
+        public Request<TResponse> Put<TResponse>(CancellationToken token) where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Put, token);
         }
@@ -242,8 +239,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Delete<TResponse>()
-            where TResponse : class
+        public Request<TResponse> Delete<TResponse>() where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Delete);
         }
@@ -253,8 +249,7 @@ namespace Pipopolam.Net.Http
         /// </summary>
         /// <typeparam name="TResult">Expected result type.</typeparam>
         /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-        public Request<TResponse> Delete<TResponse>(CancellationToken token)
-            where TResponse : class
+        public Request<TResponse> Delete<TResponse>(CancellationToken token) where TResponse : class
         {
             return Request<TResponse>(HttpMethod.Delete, token);
         }
@@ -306,7 +301,8 @@ namespace Pipopolam.Net.Http
             return new Uri(builder.ToString());
         }
 
-        private HttpContent CreateContent<TRequest>(TRequest body) where TRequest : class
+        [return: NotNullIfNotNull(nameof(body))]
+        private HttpContent? CreateContent<TRequest>(TRequest? body) where TRequest : class
         {
             // Byte array content, File transfer, etc...
             if (body is Stream)
@@ -338,7 +334,8 @@ namespace Pipopolam.Net.Http
             return JsonizeContent(body);
         }
 
-        private HttpContent JsonizeContent<TRequest>(TRequest body) where TRequest : class
+        [return: NotNullIfNotNull(nameof(body))]
+        private HttpContent? JsonizeContent<TRequest>(TRequest? body) where TRequest : class
         {
             if (body == null)
                 return null;

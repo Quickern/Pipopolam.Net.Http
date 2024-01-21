@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 
 namespace Pipopolam.Net.Http
 {
@@ -13,11 +12,11 @@ namespace Pipopolam.Net.Http
         }
     }
 
-    public class ServiceResponse<T> : ServiceResponse
+    public class ServiceResponse<T> : ServiceResponse where T : class
     {
-        public T Data { get; private set; }
+        public T? Data { get; private set; }
 
-        public ServiceResponse(T data, HttpResponseHeaders headers) : base(headers)
+        public ServiceResponse(T? data, HttpResponseHeaders headers) : base(headers)
         {
             Data = data;
         }

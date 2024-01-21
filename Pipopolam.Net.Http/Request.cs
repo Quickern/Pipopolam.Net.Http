@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http.Headers;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,20 +8,25 @@ namespace Pipopolam.Net.Http
 {
     public class Request : IDisposable
     {
-        private CancellationTokenSource _cancellationTokenSource;
-        private CancellationTokenSource _linkedSource;
+        private CancellationTokenSource? _cancellationTokenSource;
+        private CancellationTokenSource? _linkedSource;
 
-        private protected Task Task { get; set; }
+        private Task? _task;
+        private protected Task Task
+        {
+            get => _task!;
+            set => _task = value;
+        }
 
-        public HttpResponseHeaders Headers { get; protected set; }
+        public HttpResponseHeaders? Headers { get; protected set; }
 
-        private protected Request(CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource)
+        private protected Request(CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource)
         {
             _cancellationTokenSource = cancellationTokenSource;
             _linkedSource = linkedSource;
         }
 
-        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource = null) :
+        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null) :
             this(cancellationTokenSource, linkedSource)
         {
             Task = RequestWrapper(task);
@@ -46,7 +50,7 @@ namespace Pipopolam.Net.Http
 
         private protected void Clear()
         {
-            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
 
             _linkedSource?.Dispose();
@@ -73,19 +77,19 @@ namespace Pipopolam.Net.Http
 
     public class Request<T> : Request where T: class
     {
-        private new Task<T> Task { get; }
+        private new Task<T?> Task { get; }
 
-        public T Result => Task.Result;
+        public T? Result => Task.Result;
 
-        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource linkedSource = null) :
+        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null) :
             base(cancellationTokenSource, linkedSource)
         {
             base.Task = Task = RequestWrapper(task);
         }
 
-        public new TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
+        public new TaskAwaiter<T?> GetAwaiter() => Task.GetAwaiter();
 
-        private async Task<T> RequestWrapper(Task<ServiceResponse<T>> task)
+        private async Task<T?> RequestWrapper(Task<ServiceResponse<T>> task)
         {
             try
             {
@@ -93,7 +97,7 @@ namespace Pipopolam.Net.Http
 
                 Headers = response.Headers;
 
-                return response?.Data;
+                return response.Data;
             }
             finally
             {
@@ -104,9 +108,9 @@ namespace Pipopolam.Net.Http
         /// <summary>
         /// Converts request to task.
         /// </summary>
-        public new Task<T> ToTask() => Task;
+        public new Task<T?> ToTask() => Task;
 
-        public static implicit operator Task<T>(Request<T> request)
+        public static implicit operator Task<T?>(Request<T> request)
         {
             return request.ToTask();
         }

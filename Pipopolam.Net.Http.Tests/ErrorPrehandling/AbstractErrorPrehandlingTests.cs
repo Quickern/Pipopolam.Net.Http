@@ -14,7 +14,8 @@ public abstract class AbstractErrorPrehandlingTests(Service<BasicError> service)
             .With(r => r.Method == HttpMethod.Get)
             .Respond("application/json", "{ \"Success\" : true, \"SomeMessage\" : \"Test message\" }");
 
-        Data data = await Service.CreateRequest().AddSegment("test_get").Get<Data>();
+        Data? data = await Service.CreateRequest().AddSegment("test_get").Get<Data>();
+        Assert.NotNull(data);
         Assert.Equal("Test message", data.SomeMessage);
     }
 

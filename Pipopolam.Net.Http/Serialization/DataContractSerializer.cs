@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Net.Http;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Pipopolam.Net.Http.Serialization
 {
     public class DataContractSerializer : ISerializer
     {
-        public DataContractJsonSerializerSettings Settings { get; }
+        public DataContractJsonSerializerSettings? Settings { get; }
 
         public DataContractSerializer() { }
 
@@ -18,7 +19,8 @@ namespace Pipopolam.Net.Http.Serialization
             Settings = settings;
         }
 
-        public HttpContent Serialize<T>(T obj) where T : class
+        [return: NotNullIfNotNull(nameof(obj))]
+        public HttpContent? Serialize<T>(T? obj) where T : class
         {
             DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
             using (MemoryStream stream = new MemoryStream())
@@ -30,7 +32,7 @@ namespace Pipopolam.Net.Http.Serialization
             }
         }
 
-        public Task<T> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
+        public Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
         {
             return Task.Run(() =>
             {

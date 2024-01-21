@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -9,12 +10,13 @@ namespace Pipopolam.Net.Http.Serialization
 {
     public class NetJsonSerializer : ISerializer
     {
-        public HttpContent Serialize<T>(T obj) where T : class
+        [return: NotNullIfNotNull(nameof(obj))]
+        public HttpContent? Serialize<T>(T? obj) where T : class
         {
             return new StringContent(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
         }
 
-        public async Task<T> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
+        public async Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
         {
             return await JsonSerializer.DeserializeAsync<T>(stream, cancellationToken: cancellationToken);
         }

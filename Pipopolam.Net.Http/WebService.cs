@@ -1,8 +1,4 @@
-﻿#if DEBUG
-#define WEB_SERVICE_LOGS
-#endif
-
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Net;
 using System.IO;
@@ -23,6 +19,8 @@ namespace Pipopolam.Net.Http
         private CancellationTokenSource _allRequestsTokenSource = new CancellationTokenSource();
 
         private int requestId = 0;
+
+        protected virtual bool EnableLogging => false;
 
         protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
 
@@ -142,9 +140,7 @@ namespace Pipopolam.Net.Http
 
             using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
 
-            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
-            if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+            await LogRequest(id, requestInfo);
 
             HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
@@ -160,14 +156,12 @@ namespace Pipopolam.Net.Http
 
             using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
 
-            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
-            if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+            await LogRequest(id, requestInfo);
 
             HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
             Stream serialized = await resp.Content.ReadAsStreamAsync();
-            LogResponse(id, serialized);
+            await LogResponse(id, serialized);
 
             await CheckResponse(serialized, tcs.Token);
 
@@ -190,7 +184,7 @@ namespace Pipopolam.Net.Http
             }
             catch (Exception ex)
             {
-                Log("[Error] Error while parsing response: " + ex);
+                Log($"[Error] Error while parsing response: {ex.Message}");
 
                 throw new WebServiceException($"Can't parse response of type '{typeof(TResponse).Name}': {await ParseError(serialized)}", ex);
             }
@@ -208,7 +202,7 @@ namespace Pipopolam.Net.Http
             }
             catch (Exception ex)
             {
-                Log($"[Error] Error while reading response: " + ex);
+                Log($"[Error] Error while reading response: {ex.Message}");
                 return null;
             }
         }
@@ -253,7 +247,7 @@ namespace Pipopolam.Net.Http
             }
             catch (TaskCanceledException ex)
             {
-                Log("[Error] Got TaskCanceledException: " + ex);
+                Log($"[Error] Got TaskCanceledException: {ex.Message}");
 
                 if (token.IsCancellationRequested)
                     throw;
@@ -262,21 +256,35 @@ namespace Pipopolam.Net.Http
             }
             catch (HttpRequestException ex)
             {
-                Log("[Error] Got HttpRequestException: " + ex);
+                Log($"[Error] Got HttpRequestException: {ex.Message}");
 
                 throw new WebServiceNoConnectionException(ex);
             }
         }
 
-        [Conditional("WEB_SERVICE_LOGS")]
-        private void LogResponse(int id, Stream serialized)
+        private async Task LogRequest(int id, RequestBuilder requestInfo)
         {
+            if (!EnableLogging)
+                return;
+
+            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
+            if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
+                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+        }
+
+        private async Task LogResponse(int id, Stream serialized)
+        {
+            if (!EnableLogging)
+                return;
+
             try
             {
                 serialized.Seek(0, SeekOrigin.Begin);
-                TextReader reader = new StreamReader(serialized);
-                string debug = reader.ReadToEnd();
-                Log($"{BaseHost} Request {id} received: {debug}");
+                using (TextReader reader = new StreamReader(serialized))
+                {
+                    string debug = await reader.ReadToEndAsync();
+                    Log($"{BaseHost} Request {id} received: {debug}");
+                }
             }
             catch
             {
@@ -284,10 +292,17 @@ namespace Pipopolam.Net.Http
             }
         }
 
-        [Conditional("WEB_SERVICE_LOGS")]
-        protected void Log(string str)
+        private protected void Log(string str)
         {
-            Debug.WriteLine("[WebService] " + str);
+            if (!EnableLogging)
+                return;
+
+            WriteLog($"[WebService] {str}");
+        }
+
+        protected virtual void WriteLog(string logMessage)
+        {
+            Debug.WriteLine(logMessage);
         }
     }
 

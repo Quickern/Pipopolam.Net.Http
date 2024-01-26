@@ -24,11 +24,6 @@ namespace Pipopolam.Net.Http
 
         private int requestId = 0;
 
-        /// <summary>
-        /// Override this to try to deserialize error first. Some protocols uses 200 (OK) response with error data instead of correct response.
-        /// </summary>
-        protected virtual bool PrehandleErrors => false;
-
         protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
 
         /// <summary>
@@ -153,8 +148,7 @@ namespace Pipopolam.Net.Http
 
             HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
-            if (PrehandleErrors)
-                await ErrorHandler(await resp.Content.ReadAsStreamAsync(), tcs.Token);
+            await CheckResponse(await resp.Content.ReadAsStreamAsync(), tcs.Token);
 
             return new ServiceResponse(resp.Headers);
         }
@@ -175,8 +169,7 @@ namespace Pipopolam.Net.Http
             Stream serialized = await resp.Content.ReadAsStreamAsync();
             LogResponse(id, serialized);
 
-            if (PrehandleErrors)
-                await ErrorHandler(serialized, tcs.Token);
+            await CheckResponse(serialized, tcs.Token);
 
             try
             {
@@ -199,27 +192,34 @@ namespace Pipopolam.Net.Http
             {
                 Log("[Error] Error while parsing response: " + ex);
 
-                await ErrorHandler(serialized, tcs.Token);
-                throw new WebServiceException("Error while parsing response", ex);
+                throw new WebServiceException($"Can't parse response of type '{typeof(TResponse).Name}': {await ParseError(serialized)}", ex);
             }
         }
 
-        private async Task<string> ParseError(Stream serialized)
+        private protected async Task<string?> ParseError(Stream serialized)
         {
-            serialized.Seek(0, SeekOrigin.Begin);
-            using (TextReader reader = new StreamReader(serialized))
+            try
             {
-                return await reader.ReadToEndAsync();
+                serialized.Seek(0, SeekOrigin.Begin);
+                using (TextReader reader = new StreamReader(serialized))
+                {
+                    return await reader.ReadToEndAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[Error] Error while reading response: " + ex);
+                return null;
             }
         }
 
-        private protected virtual async Task ErrorHandler(Stream serialized, CancellationToken token)
+        private protected virtual Task CheckResponse(Stream serialized, CancellationToken token)
         {
-            throw new WebServiceErrorException(await ParseError(serialized));
+            return Task.CompletedTask;
         }
 
         [DoesNotReturn]
-        private protected virtual async Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
+        private protected virtual async Task HandleRemoteError(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
             throw new WebServiceRemoteException(code, await ParseError(serialized));
         }
@@ -246,7 +246,7 @@ namespace Pipopolam.Net.Http
                 {
                     Stream serialized = await resp.Content.ReadAsStreamAsync();
 
-                    await RemoteErrorHandler(resp.StatusCode, serialized, token);
+                    await HandleRemoteError(resp.StatusCode, serialized, token);
 
                     throw new NotSupportedException("Inaccessible code detected");
                 }
@@ -291,48 +291,55 @@ namespace Pipopolam.Net.Http
         }
     }
 
-    public abstract class WebService<TDefaultError> : WebService
-        where TDefaultError: class
+    public abstract class WebService<TError> : WebService
+        where TError: class
     {
-        protected override bool PrehandleErrors => typeof(IBasicResponse).IsAssignableFrom(typeof(TDefaultError));
+        /// <summary>
+        /// Can be overridden to try to deserialize errors before response.
+        /// Some protocols uses 200 (OK) response with error data instead of correct response.
+        /// true for any service with IBasicResponse error type.
+        /// </summary>
+        protected virtual bool PrehandleErrors => typeof(IBasicResponse).IsAssignableFrom(typeof(TError));
 
         protected WebService(bool critical = true) : base(critical) { }
 
-        private protected override async Task ErrorHandler(Stream serialized, CancellationToken token)
+        private protected override async Task CheckResponse(Stream serialized, CancellationToken token)
         {
+            if (!PrehandleErrors)
+                return;
+
             try
             {
                 serialized.Seek(0, SeekOrigin.Begin);
 
-                if (await Serializer.DeserializeAsync<TDefaultError>(serialized, token) is TDefaultError response &&
+                if (await Serializer.DeserializeAsync<TError>(serialized, token) is TError response &&
                         (response is IBasicResponse basicResponse) && !basicResponse.Success)
-                    throw new WebServiceErrorException<TDefaultError>(response);
+                    throw new WebServiceErrorException<TError>(response);
             }
             catch (Exception ex) when (!(ex is WebServiceException))
             {
                 Log("[Error] Error while parsing error: " + ex);
-
-                await base.ErrorHandler(serialized, token);
+                throw new WebServiceException($"Can't parse error of type '{typeof(TError).Name}': {await ParseError(serialized)}", ex);
             }
         }
 
         [DoesNotReturn]
-        private protected override async Task RemoteErrorHandler(HttpStatusCode code, Stream serialized, CancellationToken token)
+        private protected override async Task HandleRemoteError(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
             try
             {
                 serialized.Seek(0, SeekOrigin.Begin);
 
-                if (await Serializer.DeserializeAsync<TDefaultError>(serialized, token) is TDefaultError response)
-                    throw new WebServiceRemoteException<TDefaultError>(code, response);
+                if (await Serializer.DeserializeAsync<TError>(serialized, token) is TError response)
+                    throw new WebServiceRemoteException<TError>(code, response);
 
-                await base.RemoteErrorHandler(code, serialized, token);
+                await base.HandleRemoteError(code, serialized, token);
             }
             catch (Exception ex) when (!(ex is WebServiceException))
             {
                 Log("[Error] Error while parsing remote error: " + ex);
 
-                await base.RemoteErrorHandler(code, serialized, token);
+                await base.HandleRemoteError(code, serialized, token);
             }
         }
     }

@@ -7,21 +7,21 @@ namespace Pipopolam.Net.Http
     {
         public WebServiceException() { }
 
-        public WebServiceException(string message) : base(message) { }
+        public WebServiceException(string? message) : base(message) { }
 
-        public WebServiceException(string message, Exception innerException) : base(message, innerException) { }
+        public WebServiceException(string? message, Exception? innerException) : base(message, innerException) { }
     }
 
     public class WebServiceNoConnectionException : WebServiceException
     {
-        public WebServiceNoConnectionException(Exception innerException) : base("Can't connect to service", innerException) { }
+        public WebServiceNoConnectionException(Exception? innerException) : base("Can't connect to service", innerException) { }
     }
 
     public class WebServiceErrorException : WebServiceException
     {
-        public string Response { get; private set; }
+        public string? Response { get; private set; }
 
-        public WebServiceErrorException(string response)
+        public WebServiceErrorException(string? response)
         {
             Response = response;
         }
@@ -42,7 +42,7 @@ namespace Pipopolam.Net.Http
     {
         public HttpStatusCode StatusCode { get; private set; }
 
-        public WebServiceRemoteException(HttpStatusCode statusCode, string response) :
+        public WebServiceRemoteException(HttpStatusCode statusCode, string? response) :
             base(response)
         {
             StatusCode = statusCode;

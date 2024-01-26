@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Pipopolam.Net.Http.Tests.Common;
 using RichardSzalay.MockHttp;
@@ -86,6 +87,18 @@ public abstract class AbstractGenericRequestTests(Service<Error> service) : Abst
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         Assert.Equal("Not OK", ex.Response);
+    }
+
+    [Fact]
+    public async Task ResponseParseError()
+    {
+        Handler.When("https://localhost:2718/service/test_incorrect_response")
+            .Respond("application/json", "Not OK");
+
+        WebServiceException ex = await Assert.ThrowsAsync<WebServiceException>(async () =>
+            await Service.CreateRequest().AddSegment("test_incorrect_response").Get<Data>());
+
+        Assert.NotNull(ex.InnerException);
     }
 
     [Fact]

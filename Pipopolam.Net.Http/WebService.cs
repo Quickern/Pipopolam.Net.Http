@@ -280,11 +280,9 @@ namespace Pipopolam.Net.Http
             try
             {
                 serialized.Seek(0, SeekOrigin.Begin);
-                using (TextReader reader = new StreamReader(serialized))
-                {
-                    string debug = await reader.ReadToEndAsync();
-                    Log($"{BaseHost} Request {id} received: {debug}");
-                }
+                TextReader reader = new StreamReader(serialized);
+                string debug = await reader.ReadToEndAsync();
+                Log($"{BaseHost} Request {id} received: {debug}");
             }
             catch
             {

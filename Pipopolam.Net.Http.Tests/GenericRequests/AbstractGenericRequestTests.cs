@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using Pipopolam.Net.Http.Tests.Common;
 using RichardSzalay.MockHttp;

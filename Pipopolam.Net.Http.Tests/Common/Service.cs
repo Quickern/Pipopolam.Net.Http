@@ -10,7 +10,7 @@ public class Service<TError> : WebService<TError> where TError : class
 
     public MockHttpMessageHandler Handler { get; } = new MockHttpMessageHandler();
 
-    public override string BaseHost => "localhost:2718";
+    public override string Host => "localhost:2718";
     protected override HttpMessageHandler CreateHandler() => Handler;
     protected override ISerializer CreateSerializer() => _serializerFactory?.Invoke() ?? base.CreateSerializer();
 

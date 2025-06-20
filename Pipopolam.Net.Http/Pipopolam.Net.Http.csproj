@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;netcoreapp3.0</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <LangVersion>9.0</LangVersion>
 
     <RootNamespace>Pipopolam.Net.Http</RootNamespace>
     <Nullable>Enable</Nullable>
@@ -20,10 +21,6 @@
 
   <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' != 'netcoreapp3.0' ">
-    <Compile Remove="Serialization/NetJsonSerializer.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,8 +4,8 @@ namespace Pipopolam.Net.Http
 {
     public enum UrlScheme
     {
-        Http,
-        Https
+        Https,
+        Http
     }
 
     public static class UrlSchemeUtility
@@ -14,10 +14,10 @@ namespace Pipopolam.Net.Http
         {
             switch (scheme)
             {
-                case UrlScheme.Http:
-                    return "http";
                 case UrlScheme.Https:
                     return "https";
+                case UrlScheme.Http:
+                    return "http";
                 default:
                     throw new NotSupportedException($"Scheme {scheme} is not supported!");
             }
@@ -27,10 +27,10 @@ namespace Pipopolam.Net.Http
         {
             switch (name.ToLowerInvariant())
             {
-                case "http":
-                    return UrlScheme.Http;
                 case "https":
                     return UrlScheme.Https;
+                case "http":
+                    return UrlScheme.Http;
                 default:
                     throw new NotSupportedException($"Scheme {name} is not supported!");
             }

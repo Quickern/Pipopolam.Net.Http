@@ -10,48 +10,16 @@ namespace Pipopolam.Net.Http
 {
     public class RequestBuilder
     {
-        public UrlScheme Scheme { get; private set; } = UrlScheme.Https;
-        public string? Host { get; private set; }
-        public int? Port { get; private set; } = null;
-        public IEnumerable<string> Segments { get; private set; } = new List<string>();
-        public IEnumerable<QueryParameter> QueryParameters { get; private set; } = new List<QueryParameter>();
-        public IDictionary<string, string?> Headers { get; private set; } = new Dictionary<string, string?>();
-        public HttpContent? Content { get; private set; }
+        public IEnumerable<string> Segments { get; } = new List<string>();
+        public IEnumerable<QueryParameter> QueryParameters { get; } = new List<QueryParameter>();
+        public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>();
+        public object? Body { get; private set; }
 
-        public WebService Service { get; private set; }
+        public WebService Service { get; }
 
-        public RequestBuilder(WebService service)
+        internal RequestBuilder(WebService service)
         {
             Service = service;
-        }
-
-        public RequestBuilder(WebService service, UrlScheme scheme, string host) : this(service)
-        {
-            SetScheme(scheme);
-            SetHost(host);
-        }
-
-        public RequestBuilder(WebService service, UrlScheme scheme, string host, int port) : this(service, scheme, host)
-        {
-            Port = port;
-        }
-
-        public RequestBuilder SetScheme(UrlScheme scheme)
-        {
-            Scheme = scheme;
-            return this;
-        }
-
-        public RequestBuilder SetHost([NotNull] string host)
-        {
-            Host = host;
-            return this;
-        }
-
-        public RequestBuilder SetPort(int port)
-        {
-            Port = port;
-            return this;
         }
 
         /// <summary>
@@ -284,20 +252,20 @@ namespace Pipopolam.Net.Http
 
         public Uri BuildUrl()
         {
-            StringBuilder builder = new StringBuilder()
-                .Append(Scheme.ToScheme())
-                .Append("://")
-                .Append(Host);
-            if (Port.HasValue)
-                builder.Append(':').Append(Port.Value.ToString());
-            foreach (string segment in Segments)
-                builder.Append('/').Append(segment);
-            bool first = true;
-            foreach (QueryParameter param in QueryParameters)
-            {
-                builder.Append(first ? '?' : '&').Append(param.Key).Append('=').Append(param.Value);
-                first = false;
-            }
+            StringBuilder builder = new StringBuilder();
+            //     .Append(Scheme.ToScheme())
+            //     .Append("://")
+            //     .Append(Host);
+            // if (Port.HasValue)
+            //     builder.Append(':').Append(Port.Value.ToString());
+            // foreach (string segment in Segments)
+            //     builder.Append('/').Append(segment);
+            // bool first = true;
+            // foreach (QueryParameter param in QueryParameters)
+            // {
+            //     builder.Append(first ? '?' : '&').Append(param.Key).Append('=').Append(param.Value);
+            //     first = false;
+            // }
             return new Uri(builder.ToString());
         }
 

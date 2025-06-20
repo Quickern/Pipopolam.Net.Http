@@ -7,5 +7,5 @@ namespace Pipopolam.Net.Http.Tests.ErrorPrehandling.Model;
 public class BasicError : Error, IBasicResponse
 {
     [DataMember]
-    public bool Success { get; set; }
+    public bool IsSuccess { get; set; }
 }

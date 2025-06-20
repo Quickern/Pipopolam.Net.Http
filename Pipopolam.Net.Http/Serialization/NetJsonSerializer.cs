@@ -11,12 +11,12 @@ namespace Pipopolam.Net.Http.Serialization
     public class NetJsonSerializer : ISerializer
     {
         [return: NotNullIfNotNull(nameof(obj))]
-        public HttpContent? Serialize<T>(T? obj) where T : class
+        public HttpContent? Serialize<T>(T? obj)
         {
             return new StringContent(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
         }
 
-        public async Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
+        public async Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken)
         {
             return await JsonSerializer.DeserializeAsync<T>(stream, cancellationToken: cancellationToken);
         }

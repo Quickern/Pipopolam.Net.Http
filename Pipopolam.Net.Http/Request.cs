@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,42 +10,26 @@ namespace Pipopolam.Net.Http
         private CancellationTokenSource? _cancellationTokenSource;
         private CancellationTokenSource? _linkedSource;
 
-        private Task? _task;
-        private protected Task Task
-        {
-            get => _task!;
-            set => _task = value;
-        }
+        private Task<Response> _originalTask;
 
-        public HttpResponseHeaders? Headers { get; protected set; }
+        private protected Task Task => _originalTask;
 
-        private protected Request(CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource)
+        public Response Response => _originalTask.Result;
+
+        internal Request(Task<Response> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null)
         {
             _cancellationTokenSource = cancellationTokenSource;
             _linkedSource = linkedSource;
-        }
 
-        internal Request(Task<ServiceResponse> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null) :
-            this(cancellationTokenSource, linkedSource)
-        {
-            Task = RequestWrapper(task);
+            _originalTask = task.ContinueWith(t =>
+            {
+                Clear();
+
+                return t.Result;
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public TaskAwaiter GetAwaiter() => Task.GetAwaiter();
-
-        private async Task RequestWrapper(Task<ServiceResponse> task)
-        {
-            try
-            {
-                ServiceResponse response = await task;
-
-                Headers = response.Headers;
-            }
-            finally
-            {
-                Clear();
-            }
-        }
 
         private protected void Clear()
         {
@@ -75,40 +58,24 @@ namespace Pipopolam.Net.Http
         }
     }
 
-    public class Request<T> : Request where T: class
+    public class Request<T> : Request
     {
-        private new Task<T?> Task { get; }
+        private new Task<T> Task
 
-        public T? Result => Task.Result;
+        public T Result => Task.Result;
 
-        internal Request(Task<ServiceResponse<T>> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null) :
-            base(cancellationTokenSource, linkedSource)
+        internal Request(Task<Response<T>> task, CancellationTokenSource cancellationTokenSource, CancellationTokenSource? linkedSource = null) :
+            base(task.ContinueWith<Response>(t => t.Result, TaskContinuationOptions.ExecuteSynchronously), cancellationTokenSource, linkedSource)
         {
-            base.Task = Task = RequestWrapper(task);
+            // base.Task = Task = RequestWrapper(task);
         }
 
-        public new TaskAwaiter<T?> GetAwaiter() => Task.GetAwaiter();
-
-        private async Task<T?> RequestWrapper(Task<ServiceResponse<T>> task)
-        {
-            try
-            {
-                ServiceResponse<T> response = await task;
-
-                Headers = response.Headers;
-
-                return response.Data;
-            }
-            finally
-            {
-                Clear();
-            }
-        }
+        public new TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
 
         /// <summary>
         /// Converts request to task.
         /// </summary>
-        public new Task<T?> ToTask() => Task;
+        public new Task<T> ToTask() => Task;
 
         public static implicit operator Task<T?>(Request<T> request)
         {

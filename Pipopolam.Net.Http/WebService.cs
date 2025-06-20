@@ -11,26 +11,13 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Pipopolam.Net.Http
 {
-    public abstract class WebService : IDisposable
+    public class WebService : IDisposable
     {
-        public const double Timeout = 2;
-
-        private readonly bool _critical;
         private CancellationTokenSource _allRequestsTokenSource = new CancellationTokenSource();
 
-        private int requestId = 0;
+        private int _requestId = 0;
 
-        protected virtual bool EnableLogging => false;
-
-        protected virtual UrlScheme DefaultProtocol => UrlScheme.Https;
-
-        /// <summary>
-        /// Base host for all requests.
-        /// </summary>
-        public abstract string BaseHost { get; }
-
-        private CookieContainer? _cookies;
-        protected CookieContainer Cookies => _cookies ??= new CookieContainer();
+        public WebServiceSettings Settings { get; }
 
         private HttpMessageHandler? _messageHandler;
         private HttpMessageHandler MessageHandler
@@ -40,12 +27,6 @@ namespace Pipopolam.Net.Http
                 if (_messageHandler == null)
                 {
                     _messageHandler = CreateHandler();
-
-                    if (_messageHandler is HttpClientHandler clientHandler)
-                    {
-                        clientHandler.CookieContainer = Cookies;
-                        clientHandler.UseCookies = true;
-                    }
                 }
 
                 return _messageHandler;
@@ -60,8 +41,9 @@ namespace Pipopolam.Net.Http
                 if (_client == null)
                 {
                     _client = new HttpClient(MessageHandler);
-                    if (_critical)
-                        _client.Timeout = TimeSpan.FromSeconds(Timeout);
+
+                    if (Settings.DefaultTimeout != null)
+                        _client.Timeout = Settings.DefaultTimeout.Value;
                 }
 
                 return _client;
@@ -78,9 +60,9 @@ namespace Pipopolam.Net.Http
         /// For critical services 2 seconds timeout will be used for every request.
         /// Will be removed in the future releases and replaced with some way to set service timeout.
         /// </param>
-        protected WebService(bool critical = true)
+        protected WebService(WebServiceSettings settings)
         {
-            _critical = critical;
+            Settings = settings;
         }
 
         /// <summary>
@@ -96,26 +78,15 @@ namespace Pipopolam.Net.Http
         protected virtual ISerializer CreateSerializer()
         #if NETCOREAPP3_0_OR_GREATER
             => new NetJsonSerializer();
-        #else
+#else
             => new DataContractSerializer();
-        #endif
+#endif
 
         /// <summary>
         /// Create base request to extend it.
         /// </summary>
         /// <returns>New request builder.</returns>
-        public virtual RequestBuilder CreateRequest()
-        {
-            RequestBuilder builder = new RequestBuilder(this, DefaultProtocol, BaseHost);
-            GenericServicePath(builder);
-            return builder;
-        }
-
-        /// <summary>
-        /// Override this and add service path to url builder.
-        /// </summary>
-        /// <param name="builder">Url builder</param>
-        protected abstract void GenericServicePath(RequestBuilder builder);
+        public virtual RequestBuilder CreateRequest() => new RequestBuilder(this);
 
         /// <summary>
         /// Cancels all current requests. You can send new requests after that.
@@ -134,9 +105,9 @@ namespace Pipopolam.Net.Http
             _allRequestsTokenSource.Dispose();
         }
 
-        public async Task<ServiceResponse> Request(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
+        public async Task<Response> Request(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
         {
-            int id = Interlocked.Increment(ref requestId);
+            int id = Interlocked.Increment(ref _requestId);
 
             using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
 
@@ -144,15 +115,15 @@ namespace Pipopolam.Net.Http
 
             HttpResponseMessage resp = await RequestInternal(method, requestInfo, tcs.Token);
 
-            await CheckResponse(await resp.Content.ReadAsStreamAsync(), tcs.Token);
+            await CheckResponse(resp.StatusCode, await resp.Content.ReadAsStreamAsync(tcs.Token), tcs.Token);
 
-            return new ServiceResponse(resp.Headers);
+            return new Response(resp.Headers);
         }
 
-        public async Task<ServiceResponse<TResponse>> Request<TResponse>(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
+        public async Task<Response<TResponse>> Request<TResponse>(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
             where TResponse : class
         {
-            int id = Interlocked.Increment(ref requestId);
+            int id = Interlocked.Increment(ref _requestId);
 
             using CancellationTokenSource tcs = CancellationTokenSource.CreateLinkedTokenSource(_allRequestsTokenSource.Token, token);
 
@@ -163,7 +134,7 @@ namespace Pipopolam.Net.Http
             Stream serialized = await resp.Content.ReadAsStreamAsync();
             await LogResponse(id, serialized);
 
-            await CheckResponse(serialized, tcs.Token);
+            await CheckResponse(resp.StatusCode, serialized, tcs.Token);
 
             try
             {
@@ -173,13 +144,13 @@ namespace Pipopolam.Net.Http
                     using (TextReader reader = new StreamReader(serialized))
                     {
                         string response = await reader.ReadToEndAsync();
-                        return new ServiceResponse<TResponse>(response as TResponse, resp.Headers);
+                        return new Response<TResponse>(response as TResponse, resp.Headers);
                     }
                 }
                 else
                 {
                     TResponse? response = await Serializer.DeserializeAsync<TResponse>(serialized, tcs.Token);
-                    return new ServiceResponse<TResponse>(response, resp.Headers);
+                    return new Response<TResponse>(response, resp.Headers);
                 }
             }
             catch (Exception ex)
@@ -207,7 +178,7 @@ namespace Pipopolam.Net.Http
             }
         }
 
-        private protected virtual Task CheckResponse(Stream serialized, CancellationToken token)
+        private protected virtual Task CheckResponse(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
             return Task.CompletedTask;
         }
@@ -215,7 +186,7 @@ namespace Pipopolam.Net.Http
         [DoesNotReturn]
         private protected virtual async Task HandleRemoteError(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
-            throw new WebServiceRemoteException(code, await ParseError(serialized));
+            throw new WebServiceRemoteException<string?>(code, await ParseError(serialized));
         }
 
         private async Task<HttpResponseMessage> RequestInternal(HttpMethod method, RequestBuilder requestInfo, CancellationToken token)
@@ -264,12 +235,12 @@ namespace Pipopolam.Net.Http
 
         private async Task LogRequest(int id, RequestBuilder requestInfo)
         {
-            if (!EnableLogging)
+            if (!Settings.IsLoggingEnabled)
                 return;
 
-            Log($"{BaseHost} Request {id}: {requestInfo.BuildUrl()}");
+            Log($"{Host} Request {id}: {requestInfo.BuildUrl()}");
             if (requestInfo.Content is FormUrlEncodedContent || requestInfo.Content is StringContent)
-                Log($"{BaseHost} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
+                Log($"{Host} Request {id} body: {await requestInfo.Content.ReadAsStringAsync()}");
         }
 
         private async Task LogResponse(int id, Stream serialized)
@@ -282,11 +253,11 @@ namespace Pipopolam.Net.Http
                 serialized.Seek(0, SeekOrigin.Begin);
                 TextReader reader = new StreamReader(serialized);
                 string debug = await reader.ReadToEndAsync();
-                Log($"{BaseHost} Request {id} received: {debug}");
+                Log($"{Host} Request {id} received: {debug}");
             }
             catch
             {
-                Log($"{BaseHost} Request {id} can't read response");
+                Log($"{Host} Request {id} can't read response");
             }
         }
 
@@ -305,7 +276,6 @@ namespace Pipopolam.Net.Http
     }
 
     public abstract class WebService<TError> : WebService
-        where TError: class
     {
         /// <summary>
         /// Can be overridden to try to deserialize errors before response.
@@ -316,7 +286,7 @@ namespace Pipopolam.Net.Http
 
         protected WebService(bool critical = true) : base(critical) { }
 
-        private protected override async Task CheckResponse(Stream serialized, CancellationToken token)
+        private protected override async Task CheckResponse(HttpStatusCode code, Stream serialized, CancellationToken token)
         {
             if (!PrehandleErrors)
                 return;
@@ -326,8 +296,8 @@ namespace Pipopolam.Net.Http
                 serialized.Seek(0, SeekOrigin.Begin);
 
                 if (await Serializer.DeserializeAsync<TError>(serialized, token) is TError response &&
-                        (response is IBasicResponse basicResponse) && !basicResponse.Success)
-                    throw new WebServiceErrorException<TError>(response);
+                        (response is IBasicResponse basicResponse) && !basicResponse.IsSuccess)
+                    throw new WebServiceRemoteException<TError>(code, response);
             }
             catch (Exception ex) when (!(ex is WebServiceException))
             {

@@ -20,7 +20,7 @@ namespace Pipopolam.Net.Http.Serialization
         }
 
         [return: NotNullIfNotNull(nameof(obj))]
-        public HttpContent? Serialize<T>(T? obj) where T : class
+        public HttpContent? Serialize<T>(T? obj)
         {
             DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
             using (MemoryStream stream = new MemoryStream())
@@ -32,7 +32,7 @@ namespace Pipopolam.Net.Http.Serialization
             }
         }
 
-        public Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken) where T : class
+        public Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken)
         {
             return Task.Run(() =>
             {

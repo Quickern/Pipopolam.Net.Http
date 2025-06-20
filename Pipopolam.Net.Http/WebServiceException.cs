@@ -17,46 +17,23 @@ namespace Pipopolam.Net.Http
         public WebServiceNoConnectionException(Exception? innerException) : base("Can't connect to service", innerException) { }
     }
 
-    public class WebServiceErrorException : WebServiceException
+    public class WebServiceRemoteException : WebServiceException
     {
-        public string? Response { get; private set; }
+        public HttpStatusCode StatusCode { get; }
 
-        public WebServiceErrorException(string? response)
-        {
-            Response = response;
-        }
-    }
-
-    public class WebServiceErrorException<T> : WebServiceException
-        where T: class
-    {
-        public T Response { get; private set; }
-
-        public WebServiceErrorException(T response)
-        {
-            Response = response;
-        }
-    }
-
-    public class WebServiceRemoteException : WebServiceErrorException
-    {
-        public HttpStatusCode StatusCode { get; private set; }
-
-        public WebServiceRemoteException(HttpStatusCode statusCode, string? response) :
-            base(response)
+        public WebServiceRemoteException(HttpStatusCode statusCode)
         {
             StatusCode = statusCode;
         }
     }
 
-    public class WebServiceRemoteException<T> : WebServiceErrorException<T> where T: class
+    public class WebServiceRemoteException<T> : WebServiceRemoteException
     {
-        public HttpStatusCode StatusCode { get; private set; }
+        public T Response { get; }
 
-        public WebServiceRemoteException(HttpStatusCode statusCode, T response) :
-            base(response)
+        public WebServiceRemoteException(HttpStatusCode statusCode, T response) : base(statusCode)
         {
-            StatusCode = statusCode;
+            Response = response;
         }
     }
 }

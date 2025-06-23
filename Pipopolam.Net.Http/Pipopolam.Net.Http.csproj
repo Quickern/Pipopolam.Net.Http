@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
 
     <RootNamespace>Pipopolam.Net.Http</RootNamespace>
     <Nullable>Enable</Nullable>

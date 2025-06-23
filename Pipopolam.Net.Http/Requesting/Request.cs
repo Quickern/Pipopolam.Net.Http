@@ -60,7 +60,7 @@ namespace Pipopolam.Net.Http
 
     public class Request<T> : Request
     {
-        // private new Task<T> Task =>
+        private new Task<T> Task
 
         public T Result => Task.Result;
 

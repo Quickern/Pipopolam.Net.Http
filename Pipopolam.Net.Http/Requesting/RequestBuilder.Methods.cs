@@ -1,16 +1,48 @@
+using System;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Pipopolam.Net.Http.Requesting;
 
-partial class RequestBuilder
+partial class RequestBuilder : IRequest
 {
+    public Task Request(HttpMethod method)
+    {
+        CancellationTokenSource source = new CancellationTokenSource();
+        throw new NotImplementedException();
+        // return new Request(Service.Request(method, this, source.Token), source);
+    }
+
+    public Task Request(HttpMethod method, CancellationToken token)
+    {
+        CancellationTokenSource requestSource = new CancellationTokenSource();
+        CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
+        throw new NotImplementedException();
+        // return new Request(Service.Request(method, this, source.Token), requestSource, source);
+    }
+
+    public Task<TResponse> Request<TResponse>(HttpMethod method)
+    {
+        CancellationTokenSource source = new CancellationTokenSource();
+        throw new NotImplementedException();
+        // return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), source);
+    }
+
+    public Task<TResponse> Request<TResponse>(HttpMethod method, CancellationToken token)
+    {
+        CancellationTokenSource requestSource = new CancellationTokenSource();
+        CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
+        throw new NotImplementedException();
+        // return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), requestSource, source);
+    }
+
     /// <summary>
     /// Finalizes request and start it using GET method.
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResult> Get<TResult>() where TResult : class
+    public Task<TResult> Get<TResult>()
     {
         return Request<TResult>(HttpMethod.Get);
     }
@@ -20,7 +52,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResult> Get<TResult>(CancellationToken token) where TResult : class
+    public Task<TResult> Get<TResult>(CancellationToken token)
     {
         return Request<TResult>(HttpMethod.Get, token);
     }
@@ -29,7 +61,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using POST method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Post()
+    public Task Post()
     {
         return Request(HttpMethod.Post);
     }
@@ -38,7 +70,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using POST method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Post(CancellationToken token)
+    public Task Post(CancellationToken token)
     {
         return Request(HttpMethod.Post, token);
     }
@@ -48,7 +80,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Post<TResponse>() where TResponse : class
+    public Task<TResponse> Post<TResponse>()
     {
         return Request<TResponse>(HttpMethod.Post);
     }
@@ -58,7 +90,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Post<TResponse>(CancellationToken token) where TResponse : class
+    public Task<TResponse> Post<TResponse>(CancellationToken token)
     {
         return Request<TResponse>(HttpMethod.Post, token);
     }
@@ -67,7 +99,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using PUT method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Put()
+    public Task Put()
     {
         return Request(HttpMethod.Put);
     }
@@ -76,7 +108,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using PUT method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Put(CancellationToken token)
+    public Task Put(CancellationToken token)
     {
         return Request(HttpMethod.Put, token);
     }
@@ -86,7 +118,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Put<TResponse>() where TResponse : class
+    public Task<TResponse> Put<TResponse>()
     {
         return Request<TResponse>(HttpMethod.Put);
     }
@@ -96,7 +128,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Put<TResponse>(CancellationToken token) where TResponse : class
+    public Task<TResponse> Put<TResponse>(CancellationToken token)
     {
         return Request<TResponse>(HttpMethod.Put, token);
     }
@@ -105,7 +137,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using DELETE method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Delete()
+    public Task Delete()
     {
         return Request(HttpMethod.Delete);
     }
@@ -114,7 +146,7 @@ partial class RequestBuilder
     /// Finalizes request and start it using DELETE method.
     /// </summary>
     /// <returns>Awaitable request.</returns>
-    public Request Delete(CancellationToken token)
+    public Task Delete(CancellationToken token)
     {
         return Request(HttpMethod.Delete, token);
     }
@@ -124,7 +156,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Delete<TResponse>() where TResponse : class
+    public Task<TResponse> Delete<TResponse>()
     {
         return Request<TResponse>(HttpMethod.Delete);
     }
@@ -134,7 +166,7 @@ partial class RequestBuilder
     /// </summary>
     /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <returns>Awaitable request with <typeparamref name="TResult"/> result.</returns>
-    public Request<TResponse> Delete<TResponse>(CancellationToken token) where TResponse : class
+    public Task<TResponse> Delete<TResponse>(CancellationToken token)
     {
         return Request<TResponse>(HttpMethod.Delete, token);
     }

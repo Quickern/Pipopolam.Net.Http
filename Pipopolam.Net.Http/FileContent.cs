@@ -1,17 +1,15 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
-namespace Pipopolam.Net.Http
+namespace Pipopolam.Net.Http;
+
+public class FileContent
 {
-    public class FileContent
-    {
-        public string FileName { get; }
-        public Stream Stream { get; }
+    public string FileName { get; }
+    public Stream Stream { get; }
 
-        public FileContent(string fileName, Stream stream)
-        {
-            FileName = fileName;
-            Stream = stream;
-        }
+    public FileContent(string fileName, Stream stream)
+    {
+        FileName = fileName;
+        Stream = stream;
     }
 }

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
 
 namespace Pipopolam.Net.Http.Requesting;
 
-public partial class RequestBuilder
+public partial class RequestBuilder : IRequest
 {
     public IEnumerable<string> Segments { get; } = new List<string>();
     public IEnumerable<QueryParameter> QueryParameters { get; } = new List<QueryParameter>();
@@ -67,34 +65,6 @@ public partial class RequestBuilder
     {
         Headers[key] = value;
         return this;
-    }
-
-    private Request Request(HttpMethod method)
-    {
-        CancellationTokenSource source = new CancellationTokenSource();
-        return new Request(Service.Request(method, this, source.Token), source);
-    }
-
-    private Request Request(HttpMethod method, CancellationToken token)
-    {
-        CancellationTokenSource requestSource = new CancellationTokenSource();
-        CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
-        return new Request(Service.Request(method, this, source.Token), requestSource, source);
-    }
-
-    private Request<TResponse> Request<TResponse>(HttpMethod method)
-        where TResponse : class
-    {
-        CancellationTokenSource source = new CancellationTokenSource();
-        return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), source);
-    }
-
-    private Request<TResponse> Request<TResponse>(HttpMethod method, CancellationToken token)
-        where TResponse : class
-    {
-        CancellationTokenSource requestSource = new CancellationTokenSource();
-        CancellationTokenSource source = CancellationTokenSource.CreateLinkedTokenSource(requestSource.Token, token);
-        return new Request<TResponse>(Service.Request<TResponse>(method, this, source.Token), requestSource, source);
     }
 
     public Uri BuildUrl()

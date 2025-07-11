@@ -61,7 +61,7 @@ public class WebService : IDisposable
     /// For critical services 2 seconds timeout will be used for every request.
     /// Will be removed in the future releases and replaced with some way to set service timeout.
     /// </param>
-    protected WebService(WebServiceSettings settings)
+    public WebService(WebServiceSettings settings)
     {
         Settings = settings;
     }

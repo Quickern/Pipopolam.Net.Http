@@ -6,39 +6,39 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pipopolam.Net.Http.Serialization
+namespace Pipopolam.Net.Http.Serialization;
+
+public class DataContractSerializer : ISerializer
 {
-    public class DataContractSerializer : ISerializer
+    public DataContractJsonSerializerSettings? Settings { get; }
+
+    public DataContractSerializer() { }
+
+    public DataContractSerializer(DataContractJsonSerializerSettings settings)
     {
-        public DataContractJsonSerializerSettings? Settings { get; }
+        Settings = settings;
+    }
 
-        public DataContractSerializer() { }
-
-        public DataContractSerializer(DataContractJsonSerializerSettings settings)
+    [return: NotNullIfNotNull(nameof(obj))]
+    public HttpContent? Serialize<T>(T? obj)
+    {
+        DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
+        using (MemoryStream stream = new MemoryStream())
         {
-            Settings = settings;
+            ser.WriteObject(stream, obj);
+            byte[] arr = stream.ToArray();
+            string t = Encoding.UTF8.GetString(arr, 0, arr.Length);
+            return new StringContent(t, Encoding.UTF8, "application/json");
         }
+    }
 
-        [return: NotNullIfNotNull(nameof(obj))]
-        public HttpContent? Serialize<T>(T? obj)
+    public Task<T?> DeserializeAsync<T>(HttpContent content, CancellationToken cancellationToken)
+    {
+        return Task.Run(async () =>
         {
             DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
-            using (MemoryStream stream = new MemoryStream())
-            {
-                ser.WriteObject(stream, obj);
-                byte[] arr = stream.ToArray();
-                string t = Encoding.UTF8.GetString(arr, 0, arr.Length);
-                return new StringContent(t, Encoding.UTF8, "application/json");
-            }
-        }
-
-        public Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken)
-        {
-            return Task.Run(() =>
-            {
-                DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T), Settings);
-                return ser.ReadObject(stream) as T;
-            }, cancellationToken);
-        }
+            object? obj = ser.ReadObject(await content.ReadAsStreamAsync().ConfigureAwait(false));
+            return obj == null ? default : (T)obj;
+        }, cancellationToken);
     }
 }

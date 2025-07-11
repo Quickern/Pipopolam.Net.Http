@@ -4,12 +4,11 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pipopolam.Net.Http.Serialization
+namespace Pipopolam.Net.Http.Serialization;
+
+public interface ISerializer
 {
-    public interface ISerializer
-    {
-        [return: NotNullIfNotNull(nameof(obj))]
-        HttpContent? Serialize<T>(T? obj);
-        Task<T?> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken);
-    }
+    [return: NotNullIfNotNull(nameof(obj))]
+    HttpContent? Serialize<T>(T? obj);
+    Task<T?> DeserializeAsync<T>(HttpContent content, CancellationToken cancellationToken);
 }
